@@ -398,8 +398,24 @@ function Dashboard({ session }: { session: Session }) {
   const [stats, setStats] = useState({ views: 0, clicks: 0 });
   const [qrCode, setQrCode] = useState("");
   const systemTheme = useSystemTheme();
-  const resolvedTheme =
+  const [panelTheme, setPanelTheme] = useState<"system" | "dark" | "light">(
+    () =>
+      (localStorage.getItem("linksdev-panel-theme") as
+        "system" | "dark" | "light") || "system",
+  );
+  const resolvedPanelTheme = panelTheme === "system" ? systemTheme : panelTheme;
+  const resolvedProfileTheme =
     profile.theme === "system" ? systemTheme : profile.theme;
+  function changePanelTheme() {
+    const next =
+      panelTheme === "system"
+        ? "dark"
+        : panelTheme === "dark"
+          ? "light"
+          : "system";
+    setPanelTheme(next);
+    localStorage.setItem("linksdev-panel-theme", next);
+  }
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 6 } }),
     useSensor(TouchSensor, {
@@ -671,13 +687,27 @@ function Dashboard({ session }: { session: Session }) {
       </main>
     );
   return (
-    <main className={`dashboard dashboard-${resolvedTheme}`}>
+    <main className={`dashboard dashboard-${resolvedPanelTheme}`}>
       <header className="dashboard-top">
         <Brand />
         <div>
           {dirty && (
             <span className="unsaved-badge">Alterações não salvas</span>
           )}
+          <button
+            className="icon-button panel-theme-button"
+            onClick={changePanelTheme}
+            title={`Tema do painel: ${panelTheme === "system" ? "Sistema" : panelTheme === "dark" ? "Escuro" : "Claro"}`}
+            aria-label="Alterar tema do painel"
+          >
+            {panelTheme === "system" ? (
+              <MonitorSmartphone size={18} />
+            ) : panelTheme === "dark" ? (
+              <Moon size={18} />
+            ) : (
+              <Sun size={18} />
+            )}
+          </button>
           <button
             className="icon-button"
             onClick={createQrCode}
@@ -987,7 +1017,7 @@ function Dashboard({ session }: { session: Session }) {
         <LiveProfilePreview
           profile={profile}
           links={links}
-          resolvedTheme={resolvedTheme}
+          resolvedTheme={resolvedProfileTheme}
         />
       </div>
       {qrCode && (

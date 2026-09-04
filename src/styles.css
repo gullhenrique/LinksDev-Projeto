@@ -356,10 +356,10 @@ footer p {
   .avatar-wrap {
     width: 92px;
     height: 92px;
-    border-radius: 27px;
+    border-radius: 50%;
   }
   .avatar-wrap img {
-    border-radius: 22px;
+    border-radius: 50%;
   }
   .profile-link {
     min-height: 68px;
@@ -1198,6 +1198,9 @@ footer p {
   background: #fff;
   box-shadow: 0 35px 100px rgba(0, 0, 0, 0.4);
 }
+.qr-modal .kicker {
+  color: #10a967;
+}
 .qr-modal > button {
   position: absolute;
   top: 12px;
@@ -1213,11 +1216,12 @@ footer p {
 }
 .qr-modal h2 {
   margin: 8px 0 5px;
+  color: #171b22;
   font: 800 1.4rem "Manrope";
 }
 .qr-modal p {
   margin: 0;
-  color: #707986;
+  color: #626b78;
   font-size: 0.82rem;
 }
 .qr-modal img {
