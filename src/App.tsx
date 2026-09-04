@@ -1,6 +1,6 @@
 import { FormEvent, useEffect, useState } from "react";
 import {
-  HashRouter,
+  BrowserRouter,
   Link,
   Navigate,
   Route,
@@ -84,11 +84,16 @@ function AuthPage() {
   const [mode, setMode] = useState<"login" | "signup">("login");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
   const [message, setMessage] = useState("");
   const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
   async function submit(e: FormEvent) {
     e.preventDefault();
+    if (mode === "signup" && password !== confirmPassword) {
+      setMessage("As senhas não coincidem. Confira e tente novamente.");
+      return;
+    }
     setLoading(true);
     setMessage("");
     if (!isSupabaseConfigured) {
@@ -99,7 +104,13 @@ function AuthPage() {
     const result =
       mode === "login"
         ? await supabase.auth.signInWithPassword({ email, password })
-        : await supabase.auth.signUp({ email, password });
+        : await supabase.auth.signUp({
+            email,
+            password,
+            options: {
+              emailRedirectTo: `${window.location.origin}${import.meta.env.BASE_URL}login`,
+            },
+          });
     setLoading(false);
     if (result.error) setMessage(result.error.message);
     else if (mode === "signup")
@@ -146,6 +157,19 @@ function AuthPage() {
               required
             />
           </label>
+          {mode === "signup" && (
+            <label>
+              Confirmar senha
+              <input
+                type="password"
+                value={confirmPassword}
+                onChange={(e) => setConfirmPassword(e.target.value)}
+                placeholder="Digite a mesma senha novamente"
+                minLength={6}
+                required
+              />
+            </label>
+          )}
           {message && <p className="form-message">{message}</p>}
           <button className="primary-button" disabled={loading}>
             {loading ? (
@@ -281,7 +305,7 @@ function Dashboard({ session }: { session: Session }) {
         <div>
           <a
             className="preview-button"
-            href={`${import.meta.env.BASE_URL}#/u/${profile.username}`}
+            href={`${import.meta.env.BASE_URL}u/${profile.username}`}
             target="_blank"
           >
             <Eye size={17} /> Ver página
@@ -728,8 +752,8 @@ function AppRoutes() {
 }
 export function App() {
   return (
-    <HashRouter>
+    <BrowserRouter basename={import.meta.env.BASE_URL}>
       <AppRoutes />
-    </HashRouter>
+    </BrowserRouter>
   );
 }

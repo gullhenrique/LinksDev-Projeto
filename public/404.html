@@ -1,0 +1,21 @@
+<!doctype html>
+<html lang="pt-BR">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Redirecionando…</title>
+  </head>
+  <body>
+    <script>
+      const base = "/LinksDev-Projeto/";
+      const route = location.pathname.startsWith(base)
+        ? location.pathname.slice(base.length - 1)
+        : "/";
+      sessionStorage.setItem(
+        "linksdev-redirect",
+        route + location.search + location.hash,
+      );
+      location.replace(base);
+    </script>
+  </body>
+</html>
