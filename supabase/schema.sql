@@ -9,6 +9,7 @@ create table if not exists public.profiles (
   location text not null default '',
   avatar_url text not null default '',
   banner_url text not null default '',
+  instagram_handle text not null default '',
   show_bio boolean not null default true,
   show_role boolean not null default true,
   show_location boolean not null default false,

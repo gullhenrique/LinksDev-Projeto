@@ -51,6 +51,7 @@ import {
   FaYoutube,
 } from "react-icons/fa6";
 import type { Session } from "@supabase/supabase-js";
+import Cropper, { type Area, type Point } from "react-easy-crop";
 import { isSupabaseConfigured, supabase } from "./lib/supabase";
 import { profile as demo } from "./profile";
 
@@ -63,6 +64,7 @@ type Profile = {
   location: string;
   avatar_url: string;
   banner_url: string;
+  instagram_handle: string;
   show_bio: boolean;
   show_role: boolean;
   show_location: boolean;
@@ -88,6 +90,7 @@ const emptyProfile: Profile = {
   location: "",
   avatar_url: "",
   banner_url: "",
+  instagram_handle: "",
   show_bio: true,
   show_role: true,
   show_location: false,
@@ -335,6 +338,13 @@ function Dashboard({ session }: { session: Session }) {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [uploading, setUploading] = useState<"avatar" | "banner" | null>(null);
+  const [cropSource, setCropSource] = useState<{
+    url: string;
+    kind: "avatar" | "banner";
+  } | null>(null);
+  const [crop, setCrop] = useState<Point>({ x: 0, y: 0 });
+  const [zoom, setZoom] = useState(1);
+  const [croppedArea, setCroppedArea] = useState<Area | null>(null);
   const [notice, setNotice] = useState("");
   useEffect(() => {
     void load();
@@ -387,7 +397,7 @@ function Dashboard({ session }: { session: Session }) {
       },
     ]);
   }
-  async function uploadMedia(
+  function chooseMedia(
     event: ChangeEvent<HTMLInputElement>,
     kind: "avatar" | "banner",
   ) {
@@ -401,13 +411,33 @@ function Dashboard({ session }: { session: Session }) {
       setNotice("A imagem deve ter no máximo 5 MB.");
       return;
     }
-    setUploading(kind);
+    setCrop({ x: 0, y: 0 });
+    setZoom(1);
+    setCroppedArea(null);
+    setCropSource({ url: URL.createObjectURL(file), kind });
+    event.target.value = "";
+  }
+  function closeCropper() {
+    if (cropSource) URL.revokeObjectURL(cropSource.url);
+    setCropSource(null);
+  }
+  async function finishCrop() {
+    if (!cropSource || !croppedArea) return;
+    setUploading(cropSource.kind);
     setNotice("");
-    const extension = file.name.split(".").pop()?.toLowerCase() || "jpg";
-    const path = `${session.user.id}/${kind}-${Date.now()}.${extension}`;
+    const kind = cropSource.kind;
+    let blob: Blob;
+    try {
+      blob = await cropImage(cropSource.url, croppedArea);
+    } catch {
+      setNotice("Não foi possível recortar esta imagem. Tente outro arquivo.");
+      setUploading(null);
+      return;
+    }
+    const path = `${session.user.id}/${kind}-${Date.now()}.jpg`;
     const { error } = await supabase.storage
       .from("profile-media")
-      .upload(path, file, { contentType: file.type });
+      .upload(path, blob, { contentType: "image/jpeg" });
     if (error) {
       setNotice(`Não foi possível enviar a imagem: ${error.message}`);
       setUploading(null);
@@ -419,7 +449,7 @@ function Dashboard({ session }: { session: Session }) {
       `${kind === "avatar" ? "Foto" : "Banner"} enviado. Salve para publicar.`,
     );
     setUploading(null);
-    event.target.value = "";
+    closeCropper();
   }
   async function save() {
     setSaving(true);
@@ -529,20 +559,31 @@ function Dashboard({ session }: { session: Session }) {
                 value={profile.username}
                 onChange={(v) => update("username", v)}
               />
+              <Field
+                label="Instagram"
+                prefix="@"
+                value={profile.instagram_handle}
+                onChange={(v) =>
+                  update(
+                    "instagram_handle",
+                    v.replace(/^@/, "").replace(/[^a-zA-Z0-9._]/g, ""),
+                  )
+                }
+              />
               <div className="media-upload-grid wide">
                 <MediaUpload
                   label="Foto de perfil"
                   hint="Quadrada, até 5 MB"
                   value={profile.avatar_url}
                   uploading={uploading === "avatar"}
-                  onChange={(event) => uploadMedia(event, "avatar")}
+                  onChange={(event) => chooseMedia(event, "avatar")}
                 />
                 <MediaUpload
                   label="Banner da página"
                   hint="Horizontal, até 5 MB"
                   value={profile.banner_url}
                   uploading={uploading === "banner"}
-                  onChange={(event) => uploadMedia(event, "banner")}
+                  onChange={(event) => chooseMedia(event, "banner")}
                 />
               </div>
               <Field
@@ -701,6 +742,20 @@ function Dashboard({ session }: { session: Session }) {
               </button>
             </div>
           </div>
+          {cropSource && (
+            <CropImageModal
+              source={cropSource.url}
+              kind={cropSource.kind}
+              crop={crop}
+              zoom={zoom}
+              saving={Boolean(uploading)}
+              onCropChange={setCrop}
+              onZoomChange={setZoom}
+              onCropComplete={(_, pixels) => setCroppedArea(pixels)}
+              onCancel={closeCropper}
+              onConfirm={finishCrop}
+            />
+          )}
         </section>
       </div>
     </main>
@@ -745,6 +800,136 @@ function MediaUpload({
 
 function ImageIcon() {
   return <UserRound aria-hidden="true" />;
+}
+
+function CropImageModal({
+  source,
+  kind,
+  crop,
+  zoom,
+  saving,
+  onCropChange,
+  onZoomChange,
+  onCropComplete,
+  onCancel,
+  onConfirm,
+}: {
+  source: string;
+  kind: "avatar" | "banner";
+  crop: Point;
+  zoom: number;
+  saving: boolean;
+  onCropChange: (point: Point) => void;
+  onZoomChange: (zoom: number) => void;
+  onCropComplete: (area: Area, pixels: Area) => void;
+  onCancel: () => void;
+  onConfirm: () => void;
+}) {
+  useEffect(() => {
+    function closeOnEscape(event: KeyboardEvent) {
+      if (event.key === "Escape" && !saving) onCancel();
+    }
+    window.addEventListener("keydown", closeOnEscape);
+    return () => window.removeEventListener("keydown", closeOnEscape);
+  }, [onCancel, saving]);
+  return (
+    <div className="crop-modal-backdrop" role="presentation">
+      <section
+        className="crop-modal"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="crop-title"
+      >
+        <header>
+          <div>
+            <span className="kicker">Ajustar imagem</span>
+            <h2 id="crop-title">
+              {kind === "avatar" ? "Foto de perfil" : "Banner da página"}
+            </h2>
+          </div>
+          <button
+            className="crop-close"
+            onClick={onCancel}
+            disabled={saving}
+            aria-label="Fechar"
+          >
+            ×
+          </button>
+        </header>
+        <div className={`crop-area crop-${kind}`}>
+          <Cropper
+            image={source}
+            crop={crop}
+            zoom={zoom}
+            aspect={kind === "avatar" ? 1 : 3.2}
+            cropShape="rect"
+            showGrid
+            onCropChange={onCropChange}
+            onZoomChange={onZoomChange}
+            onCropComplete={onCropComplete}
+          />
+        </div>
+        <label className="zoom-control">
+          <span>Zoom</span>
+          <input
+            type="range"
+            min={1}
+            max={3}
+            step={0.05}
+            value={zoom}
+            onChange={(event) => onZoomChange(Number(event.target.value))}
+          />
+        </label>
+        <p>Arraste a imagem para escolher o melhor enquadramento.</p>
+        <footer>
+          <button className="crop-cancel" onClick={onCancel} disabled={saving}>
+            Cancelar
+          </button>
+          <button
+            className="primary-button"
+            onClick={onConfirm}
+            disabled={saving}
+          >
+            {saving ? <Loader2 className="spin" /> : <Check />}
+            {saving ? "Enviando…" : "Aplicar recorte"}
+          </button>
+        </footer>
+      </section>
+    </div>
+  );
+}
+
+async function cropImage(source: string, area: Area) {
+  const image = await new Promise<HTMLImageElement>((resolve, reject) => {
+    const element = new Image();
+    element.onload = () => resolve(element);
+    element.onerror = reject;
+    element.src = source;
+  });
+  const scale = Math.min(1, 1600 / area.width);
+  const canvas = document.createElement("canvas");
+  canvas.width = Math.round(area.width * scale);
+  canvas.height = Math.round(area.height * scale);
+  const context = canvas.getContext("2d");
+  if (!context) throw new Error("Não foi possível preparar a imagem.");
+  context.drawImage(
+    image,
+    area.x,
+    area.y,
+    area.width,
+    area.height,
+    0,
+    0,
+    canvas.width,
+    canvas.height,
+  );
+  return new Promise<Blob>((resolve, reject) => {
+    canvas.toBlob(
+      (blob) => (blob ? resolve(blob) : reject(new Error("Falha no recorte."))),
+      "image/jpeg",
+      0.9,
+    );
+  });
 }
 
 const networkIcons: Array<{ domains: string[]; icon: IconType }> = [
@@ -1092,8 +1277,11 @@ function PublicPage({ session }: { session: Session | null }) {
   const isDemo = username === "camilanogueira";
   const publicName =
     p?.display_name || (isDemo ? "Camila Nogueira" : demo.name);
-  const publicUsername =
-    p?.username || (isDemo ? "camilanogueira" : demo.username.replace("@", ""));
+  const instagramHandle = p
+    ? p.instagram_handle
+    : isDemo
+      ? "camilanogueira"
+      : "";
   const shownLinks =
     data?.links ||
     demo.links.map((l, i) => ({
@@ -1108,7 +1296,10 @@ function PublicPage({ session }: { session: Session | null }) {
     <main
       className={`page-shell ${p?.theme === "light" ? "public-light" : ""}`}
       style={
-        { "--accent": p?.accent_color || "#6ef5a8" } as React.CSSProperties
+        {
+          "--accent": p?.accent_color || "#6ef5a8",
+          "--accent-strong": p?.accent_color || "#6ef5a8",
+        } as React.CSSProperties
       }
     >
       <div className="ambient ambient-one" />
@@ -1157,7 +1348,7 @@ function PublicPage({ session }: { session: Session | null }) {
               alt="Foto de perfil"
             />
           </div>
-          <p className="eyebrow">@{publicUsername}</p>
+          {instagramHandle && <p className="eyebrow">@{instagramHandle}</p>}
           <h1>{publicName}</h1>
           {(!p || p.show_role) && (
             <p className="role">{p?.role || demo.role}</p>

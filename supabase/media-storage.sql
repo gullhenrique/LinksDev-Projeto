@@ -1,6 +1,9 @@
 alter table public.profiles
 add column if not exists banner_url text not null default '';
 
+alter table public.profiles
+add column if not exists instagram_handle text not null default '';
+
 insert into storage.buckets (id, name, public, file_size_limit, allowed_mime_types)
 values (
   'profile-media',
