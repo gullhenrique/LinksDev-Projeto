@@ -1020,8 +1020,13 @@ footer p {
   font: 800 1.8rem "Manrope";
 }
 .unsaved-badge {
+  min-height: 38px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
   margin-right: 8px;
   padding: 7px 10px;
+  text-align: center;
   color: #8a5a00;
   font-size: 0.72rem;
   font-weight: 750;
