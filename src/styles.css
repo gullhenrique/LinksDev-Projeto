@@ -1061,6 +1061,169 @@ footer p {
   color: #202630;
   font: 800 1.8rem "Manrope";
 }
+.analytics-panel {
+  display: grid;
+  gap: 15px;
+}
+.analytics-toolbar,
+.analytics-chart-card > header,
+.link-ranking > header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+.analytics-toolbar > span {
+  color: #606976;
+  font-size: 0.78rem;
+  font-weight: 750;
+}
+.analytics-toolbar > div {
+  display: flex;
+  gap: 5px;
+  padding: 4px;
+  border-radius: 11px;
+  background: #f0f3f5;
+}
+.analytics-toolbar button {
+  padding: 7px 10px;
+  color: #717986;
+  font-size: 0.72rem;
+  font-weight: 750;
+  border: 0;
+  border-radius: 8px;
+  background: transparent;
+  cursor: pointer;
+}
+.analytics-toolbar button.active {
+  color: #087b46;
+  background: #fff;
+  box-shadow: 0 2px 8px rgba(31, 40, 54, 0.08);
+}
+.analytics-chart-card,
+.link-ranking {
+  padding: 17px;
+  border: 1px solid #e3e7ea;
+  border-radius: 15px;
+  background: #fafbfc;
+}
+.analytics-chart-card header strong,
+.link-ranking header strong {
+  color: #2b313b;
+  font-size: 0.82rem;
+}
+.analytics-chart-card header span,
+.link-ranking header span {
+  color: #7f8793;
+  font-size: 0.68rem;
+}
+.analytics-chart-card header i {
+  display: inline-block;
+  width: 7px;
+  height: 7px;
+  margin: 0 3px 0 8px;
+  border-radius: 50%;
+}
+.views-dot,
+.views-bar {
+  background: #63e9a0;
+}
+.clicks-dot,
+.clicks-bar {
+  background: #4d7cff;
+}
+.analytics-chart {
+  height: 190px;
+  display: flex;
+  align-items: stretch;
+  gap: 3px;
+  margin-top: 18px;
+  padding-top: 8px;
+  overflow-x: auto;
+  border-bottom: 1px solid #dfe4e8;
+}
+.chart-day {
+  position: relative;
+  flex: 1 0 8px;
+  min-width: 8px;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
+}
+.chart-day > div {
+  height: 145px;
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  gap: 1px;
+}
+.chart-day i {
+  width: 42%;
+  min-height: 0;
+  border-radius: 4px 4px 1px 1px;
+}
+.chart-day small {
+  position: absolute;
+  bottom: 2px;
+  left: 50%;
+  color: #8b929d;
+  font-size: 0.56rem;
+  transform: translateX(-50%) rotate(-35deg);
+  transform-origin: center;
+  white-space: nowrap;
+}
+.link-ranking {
+  display: grid;
+  gap: 8px;
+}
+.link-ranking > header {
+  margin-bottom: 4px;
+}
+.link-ranking > div {
+  display: grid;
+  grid-template-columns: 28px minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 10px;
+  padding: 9px;
+  border-radius: 10px;
+  background: #fff;
+}
+.link-ranking > div > b {
+  display: grid;
+  place-items: center;
+  width: 27px;
+  height: 27px;
+  color: #087b46;
+  font-size: 0.72rem;
+  border-radius: 8px;
+  background: #e2f8ed;
+}
+.link-ranking > div > span {
+  min-width: 0;
+}
+.link-ranking > div strong,
+.link-ranking > div small {
+  display: block;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.link-ranking > div strong {
+  color: #313741;
+  font-size: 0.76rem;
+}
+.link-ranking > div small,
+.link-ranking > p {
+  margin: 2px 0 0;
+  color: #89919c;
+  font-size: 0.66rem;
+}
+.link-ranking > div em {
+  color: #5e6875;
+  font-size: 0.7rem;
+  font-style: normal;
+  font-weight: 750;
+}
 .unsaved-badge {
   min-height: 38px;
   display: inline-flex;
@@ -1668,6 +1831,28 @@ footer p {
 .dashboard-dark .stats-grid strong {
   color: #f4f5f7;
 }
+.dashboard-dark .analytics-toolbar > span,
+.dashboard-dark .analytics-chart-card header strong,
+.dashboard-dark .link-ranking header strong,
+.dashboard-dark .link-ranking > div strong {
+  color: #e8ebef;
+}
+.dashboard-dark .analytics-toolbar > div {
+  background: #20252d;
+}
+.dashboard-dark .analytics-toolbar button.active,
+.dashboard-dark .link-ranking > div {
+  color: #7cf0ae;
+  background: #292f38;
+}
+.dashboard-dark .analytics-chart-card,
+.dashboard-dark .link-ranking {
+  border-color: rgba(255, 255, 255, 0.09);
+  background: #191d24;
+}
+.dashboard-dark .analytics-chart {
+  border-color: rgba(255, 255, 255, 0.1);
+}
 .dashboard-dark .live-preview-heading {
   color: #cbd1d8;
 }
@@ -1871,6 +2056,10 @@ footer p {
   .preset-picker > div,
   .stats-grid {
     grid-template-columns: 1fr;
+  }
+  .analytics-toolbar {
+    align-items: flex-start;
+    flex-direction: column;
   }
   .unsaved-badge {
     display: none;

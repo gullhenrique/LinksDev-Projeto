@@ -397,7 +397,14 @@ function Dashboard({ session }: { session: Session }) {
   const [croppedArea, setCroppedArea] = useState<Area | null>(null);
   const [notice, setNotice] = useState("");
   const [dirty, setDirty] = useState(false);
-  const [stats, setStats] = useState({ views: 0, clicks: 0 });
+  const [analytics, setAnalytics] = useState<{
+    views: { viewed_at: string }[];
+    clicks: {
+      clicked_at: string;
+      link_title: string | null;
+      link_url: string | null;
+    }[];
+  }>({ views: [], clicks: [] });
   const [qrCode, setQrCode] = useState("");
   const [usernameStatus, setUsernameStatus] = useState<
     "idle" | "checking" | "available" | "unavailable" | "reserved"
@@ -508,17 +515,22 @@ function Dashboard({ session }: { session: Session }) {
           client_id: link.id || crypto.randomUUID(),
         })),
       );
-      const [{ count: views }, { count: clicks }] = await Promise.all([
+      const since = new Date(Date.now() - 90 * 86400000).toISOString();
+      const [{ data: views }, { data: clicks }] = await Promise.all([
         supabase
           .from("page_views")
-          .select("id", { count: "exact", head: true })
-          .eq("profile_id", session.user.id),
+          .select("viewed_at")
+          .eq("profile_id", session.user.id)
+          .gte("viewed_at", since)
+          .order("viewed_at"),
         supabase
           .from("link_clicks")
-          .select("id", { count: "exact", head: true })
-          .eq("profile_id", session.user.id),
+          .select("clicked_at, link_title, link_url")
+          .eq("profile_id", session.user.id)
+          .gte("clicked_at", since)
+          .order("clicked_at"),
       ]);
-      setStats({ views: views || 0, clicks: clicks || 0 });
+      setAnalytics({ views: views || [], clicks: clicks || [] });
     }
     setDirty(false);
     setLoading(false);
@@ -1056,24 +1068,7 @@ function Dashboard({ session }: { session: Session }) {
             title="Estatísticas"
             description="Acompanhe o alcance da sua página e dos seus links."
           >
-            <div className="stats-grid">
-              <div>
-                <span>Visualizações</span>
-                <strong>{stats.views}</strong>
-              </div>
-              <div>
-                <span>Cliques</span>
-                <strong>{stats.clicks}</strong>
-              </div>
-              <div>
-                <span>Taxa de cliques</span>
-                <strong>
-                  {stats.views
-                    ? `${Math.round((stats.clicks / stats.views) * 100)}%`
-                    : "0%"}
-                </strong>
-              </div>
-            </div>
+            <AnalyticsPanel analytics={analytics} />
           </EditorSection>
           <EditorSection
             id="conta"
@@ -1426,6 +1421,156 @@ function LiveProfilePreview({
         </div>
       </div>
     </aside>
+  );
+}
+
+function AnalyticsPanel({
+  analytics,
+}: {
+  analytics: {
+    views: { viewed_at: string }[];
+    clicks: {
+      clicked_at: string;
+      link_title: string | null;
+      link_url: string | null;
+    }[];
+  };
+}) {
+  const [period, setPeriod] = useState<7 | 30 | 90>(30);
+  const since = Date.now() - period * 86400000;
+  const views = analytics.views.filter(
+    (item) => new Date(item.viewed_at).getTime() >= since,
+  );
+  const clicks = analytics.clicks.filter(
+    (item) => new Date(item.clicked_at).getTime() >= since,
+  );
+  const days = Array.from({ length: period }, (_, index) => {
+    const date = new Date();
+    date.setHours(0, 0, 0, 0);
+    date.setDate(date.getDate() - (period - 1 - index));
+    const key = date.toISOString().slice(0, 10);
+    return {
+      key,
+      label: date.toLocaleDateString("pt-BR", {
+        day: "2-digit",
+        month: "2-digit",
+      }),
+      views: views.filter((item) => item.viewed_at.slice(0, 10) === key).length,
+      clicks: clicks.filter((item) => item.clicked_at.slice(0, 10) === key)
+        .length,
+    };
+  });
+  const max = Math.max(1, ...days.flatMap((day) => [day.views, day.clicks]));
+  const ranking = Object.values(
+    clicks.reduce<
+      Record<string, { title: string; url: string; count: number }>
+    >((result, click) => {
+      const key = click.link_url || click.link_title || "Link removido";
+      result[key] ||= {
+        title: click.link_title || "Link removido",
+        url: click.link_url || "",
+        count: 0,
+      };
+      result[key].count += 1;
+      return result;
+    }, {}),
+  ).sort((a, b) => b.count - a.count);
+  return (
+    <div className="analytics-panel">
+      <div className="analytics-toolbar">
+        <span>Período analisado</span>
+        <div>
+          {([7, 30, 90] as const).map((days) => (
+            <button
+              key={days}
+              className={period === days ? "active" : ""}
+              onClick={() => setPeriod(days)}
+            >
+              {days} dias
+            </button>
+          ))}
+        </div>
+      </div>
+      <div className="stats-grid">
+        <div>
+          <span>Visualizações</span>
+          <strong>{views.length}</strong>
+        </div>
+        <div>
+          <span>Cliques</span>
+          <strong>{clicks.length}</strong>
+        </div>
+        <div>
+          <span>Taxa de cliques</span>
+          <strong>
+            {views.length
+              ? `${Math.round((clicks.length / views.length) * 100)}%`
+              : "0%"}
+          </strong>
+        </div>
+      </div>
+      <div className="analytics-chart-card">
+        <header>
+          <strong>Atividade diária</strong>
+          <span>
+            <i className="views-dot" /> Acessos <i className="clicks-dot" />{" "}
+            Cliques
+          </span>
+        </header>
+        <div
+          className="analytics-chart"
+          aria-label="Gráfico de atividade diária"
+        >
+          {days.map((day, index) => (
+            <div
+              className="chart-day"
+              key={day.key}
+              title={`${day.label}: ${day.views} acessos e ${day.clicks} cliques`}
+            >
+              <div>
+                <i
+                  className="views-bar"
+                  style={{
+                    height: `${Math.max(day.views ? 8 : 0, (day.views / max) * 100)}%`,
+                  }}
+                />
+                <i
+                  className="clicks-bar"
+                  style={{
+                    height: `${Math.max(day.clicks ? 8 : 0, (day.clicks / max) * 100)}%`,
+                  }}
+                />
+              </div>
+              {(period === 7 ||
+                index % (period === 30 ? 5 : 15) === 0 ||
+                index === period - 1) && <small>{day.label}</small>}
+            </div>
+          ))}
+        </div>
+      </div>
+      <div className="link-ranking">
+        <header>
+          <strong>Links com melhor desempenho</strong>
+          <span>{clicks.length} cliques no período</span>
+        </header>
+        {ranking.length ? (
+          ranking.slice(0, 6).map((item, index) => (
+            <div key={item.url || item.title}>
+              <b>{index + 1}</b>
+              <span>
+                <strong>{item.title}</strong>
+                <small>{item.url || "Histórico anterior"}</small>
+              </span>
+              <em>
+                {item.count} {item.count === 1 ? "clique" : "cliques"}
+              </em>
+            </div>
+          ))
+        ) : (
+          <p>Ainda não há cliques neste período.</p>
+        )}
+      </div>
+    </div>
   );
 }
 
@@ -2018,6 +2163,8 @@ function PublicPage({ session }: { session: Session | null }) {
     void supabase.from("link_clicks").insert({
       profile_id: p.id,
       link_id: link.id || null,
+      link_title: link.title,
+      link_url: link.url,
     });
   }
   return (
