@@ -970,8 +970,14 @@ footer p {
   color: #8b929e;
   font-size: 0.69rem;
 }
-.upload-button {
+.media-actions {
   grid-column: 1 / -1;
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 8px;
+}
+.upload-button,
+.remove-media-button {
   min-height: 40px;
   display: inline-flex;
   align-items: center;
@@ -999,6 +1005,29 @@ footer p {
   width: 1px;
   height: 1px;
   opacity: 0;
+}
+.remove-media-button {
+  padding: 0 12px;
+  color: #a33f3f;
+  font-size: 0.75rem;
+  font-weight: 750;
+  border: 1px solid #f1d7d7;
+  border-radius: 9px;
+  background: #fff5f5;
+  cursor: pointer;
+}
+.remove-media-button:hover {
+  color: #8a2929;
+  border-color: #eabbbb;
+  background: #ffe8e8;
+}
+.remove-media-button svg {
+  width: 15px;
+}
+.remove-media-button:disabled,
+.upload-button:has(input:disabled) {
+  opacity: 0.55;
+  cursor: wait;
 }
 .create-pill {
   align-self: center;

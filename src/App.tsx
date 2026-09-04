@@ -451,6 +451,37 @@ function Dashboard({ session }: { session: Session }) {
     setUploading(null);
     closeCropper();
   }
+  async function removeMedia(kind: "avatar" | "banner") {
+    const label = kind === "avatar" ? "foto de perfil" : "banner";
+    if (!window.confirm(`Remover ${label}?`)) return;
+    const field = kind === "avatar" ? "avatar_url" : "banner_url";
+    const currentUrl = profile[field];
+    setUploading(kind);
+    setNotice("");
+    const { error } = await supabase
+      .from("profiles")
+      .update({ [field]: "" })
+      .eq("id", session.user.id);
+    if (error) {
+      setNotice(`Não foi possível remover: ${error.message}`);
+      setUploading(null);
+      return;
+    }
+    const marker = "/storage/v1/object/public/profile-media/";
+    try {
+      const storedPath = decodeURIComponent(
+        new URL(currentUrl).pathname.split(marker)[1] || "",
+      );
+      if (storedPath.startsWith(`${session.user.id}/`)) {
+        await supabase.storage.from("profile-media").remove([storedPath]);
+      }
+    } catch {
+      // URLs externas antigas são apenas removidas do perfil.
+    }
+    update(field, "");
+    setNotice(`${kind === "avatar" ? "Foto" : "Banner"} removido.`);
+    setUploading(null);
+  }
   async function save() {
     setSaving(true);
     setNotice("");
@@ -577,6 +608,7 @@ function Dashboard({ session }: { session: Session }) {
                   value={profile.avatar_url}
                   uploading={uploading === "avatar"}
                   onChange={(event) => chooseMedia(event, "avatar")}
+                  onRemove={() => removeMedia("avatar")}
                 />
                 <MediaUpload
                   label="Banner da página"
@@ -584,6 +616,7 @@ function Dashboard({ session }: { session: Session }) {
                   value={profile.banner_url}
                   uploading={uploading === "banner"}
                   onChange={(event) => chooseMedia(event, "banner")}
+                  onRemove={() => removeMedia("banner")}
                 />
               </div>
               <Field
@@ -768,12 +801,14 @@ function MediaUpload({
   value,
   uploading,
   onChange,
+  onRemove,
 }: {
   label: string;
   hint: string;
   value: string;
   uploading: boolean;
   onChange: (event: ChangeEvent<HTMLInputElement>) => void;
+  onRemove: () => void;
 }) {
   return (
     <div className="media-upload">
@@ -784,16 +819,27 @@ function MediaUpload({
         <strong>{label}</strong>
         <small>{hint}</small>
       </div>
-      <label className="upload-button">
-        {uploading ? <Loader2 className="spin" /> : <ImageUp />}
-        {uploading ? "Enviando…" : value ? "Trocar" : "Enviar"}
-        <input
-          type="file"
-          accept="image/*"
-          onChange={onChange}
-          disabled={uploading}
-        />
-      </label>
+      <div className="media-actions">
+        <label className="upload-button">
+          {uploading ? <Loader2 className="spin" /> : <ImageUp />}
+          {uploading ? "Processando…" : value ? "Trocar" : "Enviar"}
+          <input
+            type="file"
+            accept="image/*"
+            onChange={onChange}
+            disabled={uploading}
+          />
+        </label>
+        {value && (
+          <button
+            className="remove-media-button"
+            onClick={onRemove}
+            disabled={uploading}
+          >
+            <Trash2 /> Remover
+          </button>
+        )}
+      </div>
     </div>
   );
 }
