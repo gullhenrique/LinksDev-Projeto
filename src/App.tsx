@@ -152,7 +152,7 @@ function AuthPage() {
             <span className="kicker">Última etapa</span>
             <h1>Confirme seu e-mail.</h1>
             <p>
-              Enviamos um código de 6 dígitos para <strong>{email}</strong>.
+              Enviamos um código de 8 dígitos para <strong>{email}</strong>.
             </p>
           </div>
           <form onSubmit={verifyCode}>
@@ -166,12 +166,12 @@ function AuthPage() {
                 value={confirmationCode}
                 onChange={(e) =>
                   setConfirmationCode(
-                    e.target.value.replace(/\D/g, "").slice(0, 6),
+                    e.target.value.replace(/\D/g, "").slice(0, 8),
                   )
                 }
-                placeholder="000000"
-                pattern="[0-9]{6}"
-                maxLength={6}
+                placeholder="00000000"
+                pattern="[0-9]{8}"
+                maxLength={8}
                 autoFocus
                 required
               />
@@ -179,7 +179,7 @@ function AuthPage() {
             {message && <p className="form-message">{message}</p>}
             <button
               className="primary-button"
-              disabled={loading || confirmationCode.length !== 6}
+              disabled={loading || confirmationCode.length !== 8}
             >
               {loading ? (
                 <Loader2 className="spin" size={18} />
