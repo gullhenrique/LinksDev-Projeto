@@ -120,6 +120,7 @@ const emptyProfile: Profile = {
   theme: "system",
 };
 const exampleAvatar = `${import.meta.env.BASE_URL}perfil-exemplo.png`;
+const defaultAvatar = `${import.meta.env.BASE_URL}avatar-default.png`;
 
 function Brand() {
   return (
@@ -975,7 +976,19 @@ function MediaUpload({
   return (
     <div className="media-upload">
       <div className="media-preview">
-        {value ? <img src={value} alt="" /> : <ImageIcon />}
+        {value ? (
+          <img
+            src={value}
+            alt=""
+            onError={(event) => {
+              if (!event.currentTarget.src.endsWith("avatar-default.png")) {
+                event.currentTarget.src = defaultAvatar;
+              }
+            }}
+          />
+        ) : (
+          <img src={defaultAvatar} alt="Avatar padrão" />
+        )}
       </div>
       <div>
         <strong>{label}</strong>
@@ -1004,10 +1017,6 @@ function MediaUpload({
       </div>
     </div>
   );
-}
-
-function ImageIcon() {
-  return <UserRound aria-hidden="true" />;
 }
 
 function CropImageModal({
@@ -1563,8 +1572,15 @@ function PublicPage({ session }: { session: Session | null }) {
         <header className="profile-header">
           <div className="avatar-wrap">
             <img
-              src={p?.avatar_url || (isDemo ? exampleAvatar : demo.avatar)}
+              src={
+                isDemo ? exampleAvatar : p?.avatar_url?.trim() || defaultAvatar
+              }
               alt="Foto de perfil"
+              onError={(event) => {
+                if (!event.currentTarget.src.endsWith("avatar-default.png")) {
+                  event.currentTarget.src = defaultAvatar;
+                }
+              }}
             />
           </div>
           {instagramHandle && <p className="eyebrow">@{instagramHandle}</p>}
