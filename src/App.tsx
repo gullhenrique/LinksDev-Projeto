@@ -23,6 +23,7 @@ import {
   Globe2,
   GripVertical,
   ImageUp,
+  KeyRound,
   Link2,
   Loader2,
   LogOut,
@@ -398,6 +399,13 @@ function Dashboard({ session }: { session: Session }) {
   const [dirty, setDirty] = useState(false);
   const [stats, setStats] = useState({ views: 0, clicks: 0 });
   const [qrCode, setQrCode] = useState("");
+  const [usernameStatus, setUsernameStatus] = useState<
+    "idle" | "checking" | "available" | "unavailable" | "reserved"
+  >("idle");
+  const [newPassword, setNewPassword] = useState("");
+  const [confirmNewPassword, setConfirmNewPassword] = useState("");
+  const [passwordNotice, setPasswordNotice] = useState("");
+  const [changingPassword, setChangingPassword] = useState(false);
   const systemTheme = useSystemTheme();
   const [panelTheme, setPanelTheme] = useState<"system" | "dark" | "light">(
     () =>
@@ -429,6 +437,42 @@ function Dashboard({ session }: { session: Session }) {
   useEffect(() => {
     void load();
   }, [session.user.id]);
+  useEffect(() => {
+    if (loading) return;
+    const username = profile.username.toLowerCase().trim();
+    const reserved = new Set([
+      "admin",
+      "api",
+      "dashboard",
+      "entrar",
+      "login",
+      "logout",
+      "signup",
+      "suporte",
+      "termos",
+      "privacidade",
+      "camilanogueira",
+    ]);
+    if (!username || username.length < 3) {
+      setUsernameStatus("idle");
+      return;
+    }
+    if (reserved.has(username)) {
+      setUsernameStatus("reserved");
+      return;
+    }
+    setUsernameStatus("checking");
+    const timer = window.setTimeout(async () => {
+      const { data } = await supabase
+        .from("profiles")
+        .select("id")
+        .eq("username", username)
+        .neq("id", session.user.id)
+        .maybeSingle();
+      setUsernameStatus(data ? "unavailable" : "available");
+    }, 450);
+    return () => window.clearTimeout(timer);
+  }, [profile.username, loading, session.user.id]);
   useEffect(() => {
     function warnBeforeLeaving(event: BeforeUnloadEvent) {
       if (!dirty) return;
@@ -632,6 +676,15 @@ function Dashboard({ session }: { session: Session }) {
     setUploading(null);
   }
   async function save() {
+    if (
+      profile.username.length < 3 ||
+      usernameStatus === "reserved" ||
+      usernameStatus === "unavailable" ||
+      usernameStatus === "checking"
+    ) {
+      setNotice("Escolha um nome de usuário disponível antes de publicar.");
+      return;
+    }
     setSaving(true);
     setNotice("");
     const clean = {
@@ -680,6 +733,27 @@ function Dashboard({ session }: { session: Session }) {
       color: { dark: "#101418", light: "#ffffff" },
     });
     setQrCode(image);
+  }
+  async function changePassword() {
+    setPasswordNotice("");
+    if (newPassword.length < 8) {
+      setPasswordNotice("A nova senha precisa ter pelo menos 8 caracteres.");
+      return;
+    }
+    if (newPassword !== confirmNewPassword) {
+      setPasswordNotice("As senhas não coincidem.");
+      return;
+    }
+    setChangingPassword(true);
+    const { error } = await supabase.auth.updateUser({ password: newPassword });
+    setChangingPassword(false);
+    if (error) {
+      setPasswordNotice(`Não foi possível alterar: ${error.message}`);
+      return;
+    }
+    setNewPassword("");
+    setConfirmNewPassword("");
+    setPasswordNotice("Senha alterada com segurança.");
   }
   if (loading)
     return (
@@ -759,6 +833,9 @@ function Dashboard({ session }: { session: Session }) {
             <a href="#estatisticas">
               <BarChart3 /> Estatísticas
             </a>
+            <a href="#conta">
+              <KeyRound /> Conta e segurança
+            </a>
           </nav>
         </aside>
         <section className="editor-stack">
@@ -778,7 +855,29 @@ function Dashboard({ session }: { session: Session }) {
                 label="Nome de usuário"
                 prefix="links.dev/"
                 value={profile.username}
-                onChange={(v) => update("username", v)}
+                onChange={(v) =>
+                  update("username", v.toLowerCase().replace(/[^a-z0-9_]/g, ""))
+                }
+                message={
+                  profile.username.length > 0 && profile.username.length < 3
+                    ? "Use pelo menos 3 caracteres."
+                    : usernameStatus === "checking"
+                      ? "Verificando disponibilidade…"
+                      : usernameStatus === "available"
+                        ? "Nome disponível."
+                        : usernameStatus === "unavailable"
+                          ? "Este nome já está sendo usado."
+                          : usernameStatus === "reserved"
+                            ? "Este nome é reservado pelo LinksDev."
+                            : ""
+                }
+                tone={
+                  usernameStatus === "available"
+                    ? "success"
+                    : usernameStatus === "idle" || usernameStatus === "checking"
+                      ? "neutral"
+                      : "error"
+                }
               />
               <Field
                 label="Instagram"
@@ -975,6 +1074,49 @@ function Dashboard({ session }: { session: Session }) {
                 </strong>
               </div>
             </div>
+          </EditorSection>
+          <EditorSection
+            id="conta"
+            icon={<KeyRound />}
+            title="Conta e segurança"
+            description={`Conta conectada como ${session.user.email || "usuário"}.`}
+          >
+            <div className="password-grid">
+              <label className="field">
+                Nova senha
+                <input
+                  type="password"
+                  autoComplete="new-password"
+                  value={newPassword}
+                  onChange={(event) => setNewPassword(event.target.value)}
+                  placeholder="Mínimo de 8 caracteres"
+                />
+              </label>
+              <label className="field">
+                Confirmar nova senha
+                <input
+                  type="password"
+                  autoComplete="new-password"
+                  value={confirmNewPassword}
+                  onChange={(event) =>
+                    setConfirmNewPassword(event.target.value)
+                  }
+                  placeholder="Digite novamente"
+                />
+              </label>
+            </div>
+            {passwordNotice && (
+              <p className="account-notice">{passwordNotice}</p>
+            )}
+            <button
+              className="account-button"
+              type="button"
+              onClick={changePassword}
+              disabled={changingPassword || !newPassword || !confirmNewPassword}
+            >
+              <ShieldCheck size={18} />{" "}
+              {changingPassword ? "Alterando…" : "Alterar senha"}
+            </button>
           </EditorSection>
           <div className="save-bar">
             {notice && (
@@ -1531,6 +1673,8 @@ function Field({
   wide,
   prefix,
   placeholder,
+  message,
+  tone = "neutral",
 }: {
   label: string;
   value: string;
@@ -1538,6 +1682,8 @@ function Field({
   wide?: boolean;
   prefix?: string;
   placeholder?: string;
+  message?: string;
+  tone?: "neutral" | "success" | "error";
 }) {
   return (
     <label className={wide ? "field wide" : "field"}>
@@ -1550,6 +1696,7 @@ function Field({
           onChange={(e) => onChange(e.target.value)}
         />
       </div>
+      {message && <small className={`field-message ${tone}`}>{message}</small>}
     </label>
   );
 }

@@ -697,6 +697,48 @@ footer p {
   border-color: #e0e3e7;
   background: #fafbfc;
 }
+.field-message {
+  display: block;
+  margin-top: 6px;
+  color: #78818e;
+  font-size: 0.72rem;
+  font-weight: 650;
+}
+.field-message.success {
+  color: #098c50;
+}
+.field-message.error {
+  color: #c54848;
+}
+.password-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+}
+.account-notice {
+  margin: 12px 0 0;
+  color: #657080;
+  font-size: 0.78rem;
+}
+.account-button {
+  min-height: 44px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  margin-top: 14px;
+  padding: 0 15px;
+  color: #062516;
+  font-weight: 800;
+  border: 0;
+  border-radius: 11px;
+  background: #6ef5a8;
+  cursor: pointer;
+}
+.account-button:disabled {
+  cursor: not-allowed;
+  opacity: 0.48;
+}
 .prefixed {
   display: flex;
   align-items: center;
@@ -1557,6 +1599,16 @@ footer p {
 .dashboard-dark .appearance-row > label {
   color: #cbd0d8;
 }
+.dashboard-dark .field-message,
+.dashboard-dark .account-notice {
+  color: #919aa7;
+}
+.dashboard-dark .field-message.success {
+  color: #74edaa;
+}
+.dashboard-dark .field-message.error {
+  color: #ff9994;
+}
 .dashboard-dark .field input,
 .dashboard-dark .link-editor input,
 .dashboard-dark .link-advanced input,
@@ -1793,6 +1845,9 @@ footer p {
     padding: 19px 15px;
   }
   .form-grid {
+    grid-template-columns: 1fr;
+  }
+  .password-grid {
     grid-template-columns: 1fr;
   }
   .field.wide {
