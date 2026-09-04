@@ -2025,7 +2025,7 @@ footer p {
   height: 74px;
   object-fit: cover;
   border: 3px solid #79f2ad;
-  border-radius: 23px;
+  border-radius: 50%;
 }
 .mini-profile > small {
   display: block;
