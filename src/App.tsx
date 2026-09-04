@@ -10,6 +10,7 @@ import {
 } from "react-router-dom";
 import {
   ArrowLeft,
+  ArrowRight,
   Check,
   Eye,
   EyeOff,
@@ -24,10 +25,13 @@ import {
   Plus,
   Save,
   Share2,
+  ShieldCheck,
+  SlidersHorizontal,
   Sparkles,
   Sun,
   Trash2,
   UserRound,
+  Zap,
 } from "lucide-react";
 import type { Session } from "@supabase/supabase-js";
 import { isSupabaseConfigured, supabase } from "./lib/supabase";
@@ -85,6 +89,8 @@ function AuthPage() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
+  const [confirmationCode, setConfirmationCode] = useState("");
+  const [awaitingCode, setAwaitingCode] = useState(false);
   const [message, setMessage] = useState("");
   const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
@@ -107,16 +113,96 @@ function AuthPage() {
         : await supabase.auth.signUp({
             email,
             password,
-            options: {
-              emailRedirectTo: `${window.location.origin}${import.meta.env.BASE_URL}login`,
-            },
           });
     setLoading(false);
     if (result.error) setMessage(result.error.message);
-    else if (mode === "signup")
-      setMessage("Confira seu e-mail para confirmar o cadastro.");
+    else if (mode === "signup") {
+      setAwaitingCode(true);
+      setMessage("");
+    } else navigate("/dashboard");
+  }
+  async function verifyCode(e: FormEvent) {
+    e.preventDefault();
+    setLoading(true);
+    setMessage("");
+    const { error } = await supabase.auth.verifyOtp({
+      email,
+      token: confirmationCode,
+      type: "signup",
+    });
+    setLoading(false);
+    if (error)
+      setMessage("Código inválido ou expirado. Solicite um novo código.");
     else navigate("/dashboard");
   }
+  async function resendCode() {
+    setLoading(true);
+    const { error } = await supabase.auth.resend({ type: "signup", email });
+    setLoading(false);
+    setMessage(error ? error.message : "Um novo código foi enviado.");
+  }
+  if (awaitingCode)
+    return (
+      <main className="auth-page">
+        <div className="auth-orb" />
+        <section className="auth-card code-card">
+          <Brand />
+          <div className="auth-heading">
+            <span className="kicker">Última etapa</span>
+            <h1>Confirme seu e-mail.</h1>
+            <p>
+              Enviamos um código de 6 dígitos para <strong>{email}</strong>.
+            </p>
+          </div>
+          <form onSubmit={verifyCode}>
+            <label>
+              Código de confirmação
+              <input
+                className="code-input"
+                type="text"
+                inputMode="numeric"
+                autoComplete="one-time-code"
+                value={confirmationCode}
+                onChange={(e) =>
+                  setConfirmationCode(
+                    e.target.value.replace(/\D/g, "").slice(0, 6),
+                  )
+                }
+                placeholder="000000"
+                pattern="[0-9]{6}"
+                maxLength={6}
+                autoFocus
+                required
+              />
+            </label>
+            {message && <p className="form-message">{message}</p>}
+            <button
+              className="primary-button"
+              disabled={loading || confirmationCode.length !== 6}
+            >
+              {loading ? (
+                <Loader2 className="spin" size={18} />
+              ) : (
+                "Confirmar cadastro"
+              )}
+            </button>
+          </form>
+          <button
+            className="text-button"
+            onClick={resendCode}
+            disabled={loading}
+          >
+            Não recebeu? Enviar outro código
+          </button>
+          <button
+            className="back-link button-link"
+            onClick={() => setAwaitingCode(false)}
+          >
+            <ArrowLeft size={15} /> Corrigir meu e-mail
+          </button>
+        </section>
+      </main>
+    );
   return (
     <main className="auth-page">
       <div className="auth-orb" />
@@ -305,8 +391,9 @@ function Dashboard({ session }: { session: Session }) {
         <div>
           <a
             className="preview-button"
-            href={`${import.meta.env.BASE_URL}u/${profile.username}`}
+            href={`${import.meta.env.BASE_URL}${profile.username}`}
             target="_blank"
+            rel="noreferrer"
           >
             <Eye size={17} /> Ver página
           </a>
@@ -582,6 +669,192 @@ function EditorSection({
   );
 }
 
+function LandingPage() {
+  return (
+    <main className="landing">
+      <nav className="landing-nav">
+        <Brand />
+        <div className="landing-nav-links">
+          <a href="#como-funciona">Como funciona</a>
+          <a href="#recursos">Recursos</a>
+        </div>
+        <div className="landing-nav-actions">
+          <Link className="nav-login" to="/login">
+            Entrar
+          </Link>
+          <Link className="nav-cta" to="/login">
+            Criar minha página
+          </Link>
+        </div>
+      </nav>
+
+      <section className="landing-hero">
+        <div className="hero-copy">
+          <span className="hero-badge">
+            <Sparkles size={15} /> Um link para tudo que é seu
+          </span>
+          <h1>
+            Sua presença digital,
+            <br />
+            <em>do seu jeito.</em>
+          </h1>
+          <p>
+            Reúna seus sites, redes sociais, vídeos, produtos e contatos em uma
+            página bonita que combina com você.
+          </p>
+          <div className="hero-actions">
+            <Link className="hero-primary" to="/login">
+              Criar minha página grátis <ArrowRight size={18} />
+            </Link>
+            <Link className="hero-secondary" to="/gustavocouto">
+              Ver página de exemplo
+            </Link>
+          </div>
+          <div className="hero-proof">
+            <span>✓ Sem código</span>
+            <span>✓ Personalizável</span>
+            <span>✓ Pronto em minutos</span>
+          </div>
+        </div>
+
+        <div
+          className="hero-showcase"
+          aria-label="Exemplo de uma página de links"
+        >
+          <div className="showcase-glow" />
+          <div className="browser-frame">
+            <div className="browser-bar">
+              <i />
+              <i />
+              <i />
+              <span>links.dev/gustavocouto</span>
+            </div>
+            <div className="mini-profile">
+              <img src={demo.avatar} alt="Exemplo de perfil" />
+              <small>@gustavocouto</small>
+              <h2>Gustavo Couto</h2>
+              <p>Designer & desenvolvedor criando experiências digitais.</p>
+              <div className="mini-link featured">
+                <span>
+                  <Zap size={17} />
+                </span>
+                <b>Conheça meu trabalho</b>
+                <i>↗</i>
+              </div>
+              <div className="mini-link">
+                <span>
+                  <Link2 size={17} />
+                </span>
+                <b>Meu canal no YouTube</b>
+                <i>↗</i>
+              </div>
+              <div className="mini-link">
+                <span>
+                  <MonitorSmartphone size={17} />
+                </span>
+                <b>Visite meu site</b>
+                <i>↗</i>
+              </div>
+            </div>
+          </div>
+          <div className="floating-note note-one">
+            <Palette size={17} />
+            <span>
+              <b>Sua identidade</b> cores e estilo
+            </span>
+          </div>
+          <div className="floating-note note-two">
+            <Eye size={17} />
+            <span>
+              <b>Você escolhe</b> o que exibir
+            </span>
+          </div>
+        </div>
+      </section>
+
+      <section className="how-section" id="como-funciona">
+        <div className="section-heading">
+          <span className="kicker">Simples de verdade</span>
+          <h2>
+            Da ideia ao seu link
+            <br />
+            em três passos.
+          </h2>
+        </div>
+        <div className="steps-grid">
+          <article>
+            <span>01</span>
+            <UserRound />
+            <h3>Crie sua conta</h3>
+            <p>Escolha seu endereço exclusivo e conte um pouco sobre você.</p>
+          </article>
+          <article>
+            <span>02</span>
+            <SlidersHorizontal />
+            <h3>Personalize tudo</h3>
+            <p>Adicione seus links e decida quais informações quer mostrar.</p>
+          </article>
+          <article>
+            <span>03</span>
+            <Share2 />
+            <h3>Compartilhe</h3>
+            <p>Use seu único link na bio, cartão, mensagem ou onde quiser.</p>
+          </article>
+        </div>
+      </section>
+
+      <section className="features-section" id="recursos">
+        <div className="feature-copy">
+          <span className="kicker">Feito para todo mundo</span>
+          <h2>Você não precisa ter portfólio para ter presença.</h2>
+          <p>
+            Divulgue o que importa para você: uma loja, um canal, uma agenda,
+            suas redes ou apenas um jeito fácil de entrar em contato.
+          </p>
+          <ul>
+            <li>
+              <ShieldCheck /> Seus dados protegidos
+            </li>
+            <li>
+              <Palette /> Visual com a sua identidade
+            </li>
+            <li>
+              <Eye /> Informações sempre opcionais
+            </li>
+          </ul>
+        </div>
+        <div className="audience-cloud">
+          <span>Criadores</span>
+          <span>Profissionais</span>
+          <span>Lojas</span>
+          <span>Artistas</span>
+          <span>Freelancers</span>
+          <span>Empresas</span>
+          <span>Influenciadores</span>
+        </div>
+      </section>
+
+      <section className="landing-final">
+        <Sparkles />
+        <h2>
+          Tudo o que é seu.
+          <br />
+          Em um só lugar.
+        </h2>
+        <p>Comece agora e transforme sua bio em uma experiência.</p>
+        <Link to="/login">
+          Criar minha página <ArrowRight size={18} />
+        </Link>
+      </section>
+      <footer className="landing-footer">
+        <Brand />
+        <p>Uma nova forma de compartilhar sua presença digital.</p>
+        <span>© 2026 LinksDev · nome provisório</span>
+      </footer>
+    </main>
+  );
+}
+
 function PublicPage() {
   const { username } = useParams();
   const [data, setData] = useState<{
@@ -590,7 +863,10 @@ function PublicPage() {
   } | null>(null);
   const [loading, setLoading] = useState(Boolean(username));
   useEffect(() => {
-    if (!username) return;
+    if (!username || username === "gustavocouto") {
+      setLoading(false);
+      return;
+    }
     void (async () => {
       const { data: p } = await supabase
         .from("profiles")
@@ -615,7 +891,7 @@ function PublicPage() {
         <Loader2 className="spin" />
       </main>
     );
-  if (username && !data)
+  if (username && username !== "gustavocouto" && !data)
     return (
       <main className="not-found">
         <Brand />
@@ -625,6 +901,10 @@ function PublicPage() {
       </main>
     );
   const p = data?.profile;
+  const isDemo = username === "gustavocouto";
+  const publicName = p?.display_name || (isDemo ? "Gustavo Couto" : demo.name);
+  const publicUsername =
+    p?.username || (isDemo ? "gustavocouto" : demo.username.replace("@", ""));
   const shownLinks =
     data?.links ||
     demo.links.map((l, i) => ({
@@ -658,7 +938,7 @@ function PublicPage() {
               onClick={() =>
                 navigator.share?.({
                   url: location.href,
-                  title: p?.display_name || demo.name,
+                  title: publicName,
                 })
               }
             >
@@ -670,10 +950,8 @@ function PublicPage() {
           <div className="avatar-wrap">
             <img src={p?.avatar_url || demo.avatar} alt="Foto de perfil" />
           </div>
-          <p className="eyebrow">
-            @{p?.username || demo.username.replace("@", "")}
-          </p>
-          <h1>{p?.display_name || demo.name}</h1>
+          <p className="eyebrow">@{publicUsername}</p>
+          <h1>{publicName}</h1>
           {(!p || p.show_role) && (
             <p className="role">{p?.role || demo.role}</p>
           )}
@@ -734,7 +1012,8 @@ function AppRoutes() {
     );
   return (
     <Routes>
-      <Route path="/" element={<PublicPage />} />
+      <Route path="/" element={<LandingPage />} />
+      <Route path="/gustavocouto" element={<PublicPage />} />
       <Route path="/u/:username" element={<PublicPage />} />
       <Route
         path="/login"
@@ -746,6 +1025,7 @@ function AppRoutes() {
           session ? <Dashboard session={session} /> : <Navigate to="/login" />
         }
       />
+      <Route path="/:username" element={<PublicPage />} />
       <Route path="*" element={<Navigate to="/" />} />
     </Routes>
   );
