@@ -1340,7 +1340,7 @@ footer p {
 .media-upload {
   min-width: 0;
   display: grid;
-  grid-template-columns: 64px minmax(0, 1fr);
+  grid-template-columns: 76px minmax(0, 1fr);
   align-items: center;
   gap: 13px;
   padding: 15px;
@@ -1357,6 +1357,15 @@ footer p {
   color: #7e8793;
   border-radius: 12px;
   background: #e9edf1;
+}
+.media-preview-avatar {
+  justify-self: center;
+  border-radius: 50%;
+}
+.media-preview-banner {
+  width: 76px;
+  height: 56px;
+  border-radius: 11px;
 }
 .media-preview img {
   width: 100%;

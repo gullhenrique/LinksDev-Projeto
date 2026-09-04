@@ -131,6 +131,7 @@ const emptyProfile: Profile = {
 };
 const exampleAvatar = `${import.meta.env.BASE_URL}perfil-exemplo.png`;
 const defaultAvatar = `${import.meta.env.BASE_URL}avatar-default.png`;
+const defaultBanner = `${import.meta.env.BASE_URL}banner-default.svg`;
 
 function Brand() {
   return (
@@ -792,14 +793,16 @@ function Dashboard({ session }: { session: Session }) {
               />
               <div className="media-upload-grid wide">
                 <MediaUpload
+                  kind="avatar"
                   label="Foto de perfil"
-                  hint="Quadrada, até 5 MB"
+                  hint="Redonda, até 5 MB"
                   value={profile.avatar_url}
                   uploading={uploading === "avatar"}
                   onChange={(event) => chooseMedia(event, "avatar")}
                   onRemove={() => removeMedia("avatar")}
                 />
                 <MediaUpload
+                  kind="banner"
                   label="Banner da página"
                   hint="Horizontal, até 5 MB"
                   value={profile.banner_url}
@@ -1285,6 +1288,7 @@ function LiveProfilePreview({
 }
 
 function MediaUpload({
+  kind,
   label,
   hint,
   value,
@@ -1292,6 +1296,7 @@ function MediaUpload({
   onChange,
   onRemove,
 }: {
+  kind: "avatar" | "banner";
   label: string;
   hint: string;
   value: string;
@@ -1301,19 +1306,24 @@ function MediaUpload({
 }) {
   return (
     <div className="media-upload">
-      <div className="media-preview">
+      <div className={`media-preview media-preview-${kind}`}>
         {value ? (
           <img
             src={value}
             alt=""
             onError={(event) => {
-              if (!event.currentTarget.src.endsWith("avatar-default.png")) {
-                event.currentTarget.src = defaultAvatar;
+              const fallback =
+                kind === "avatar" ? defaultAvatar : defaultBanner;
+              if (event.currentTarget.src !== fallback) {
+                event.currentTarget.src = fallback;
               }
             }}
           />
         ) : (
-          <img src={defaultAvatar} alt="Avatar padrão" />
+          <img
+            src={kind === "avatar" ? defaultAvatar : defaultBanner}
+            alt={kind === "avatar" ? "Avatar padrão" : "Banner padrão"}
+          />
         )}
       </div>
       <div>
