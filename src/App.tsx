@@ -75,6 +75,7 @@ const emptyProfile: Profile = {
   accent_color: "#6ef5a8",
   theme: "dark",
 };
+const exampleAvatar = `${import.meta.env.BASE_URL}perfil-exemplo.png`;
 
 function Brand() {
   return (
@@ -706,7 +707,7 @@ function LandingPage() {
             <Link className="hero-primary" to="/login">
               Criar minha página grátis <ArrowRight size={18} />
             </Link>
-            <Link className="hero-secondary" to="/gustavocouto">
+            <Link className="hero-secondary" to="/camilanogueira">
               Ver página de exemplo
             </Link>
           </div>
@@ -727,13 +728,13 @@ function LandingPage() {
               <i />
               <i />
               <i />
-              <span>links.dev/gustavocouto</span>
+              <span>links.dev/camilanogueira</span>
             </div>
             <div className="mini-profile">
-              <img src={demo.avatar} alt="Exemplo de perfil" />
-              <small>@gustavocouto</small>
-              <h2>Gustavo Couto</h2>
-              <p>Designer & desenvolvedor criando experiências digitais.</p>
+              <img src={exampleAvatar} alt="Foto da usuária de exemplo" />
+              <small>@camilanogueira</small>
+              <h2>Camila Nogueira</h2>
+              <p>Conteúdo, projetos e novidades reunidos em um só lugar.</p>
               <div className="mini-link featured">
                 <span>
                   <Zap size={17} />
@@ -863,7 +864,7 @@ function PublicPage() {
   } | null>(null);
   const [loading, setLoading] = useState(Boolean(username));
   useEffect(() => {
-    if (!username || username === "gustavocouto") {
+    if (!username || username === "camilanogueira") {
       setLoading(false);
       return;
     }
@@ -891,7 +892,7 @@ function PublicPage() {
         <Loader2 className="spin" />
       </main>
     );
-  if (username && username !== "gustavocouto" && !data)
+  if (username && username !== "camilanogueira" && !data)
     return (
       <main className="not-found">
         <Brand />
@@ -901,10 +902,11 @@ function PublicPage() {
       </main>
     );
   const p = data?.profile;
-  const isDemo = username === "gustavocouto";
-  const publicName = p?.display_name || (isDemo ? "Gustavo Couto" : demo.name);
+  const isDemo = username === "camilanogueira";
+  const publicName =
+    p?.display_name || (isDemo ? "Camila Nogueira" : demo.name);
   const publicUsername =
-    p?.username || (isDemo ? "gustavocouto" : demo.username.replace("@", ""));
+    p?.username || (isDemo ? "camilanogueira" : demo.username.replace("@", ""));
   const shownLinks =
     data?.links ||
     demo.links.map((l, i) => ({
@@ -948,7 +950,10 @@ function PublicPage() {
         </nav>
         <header className="profile-header">
           <div className="avatar-wrap">
-            <img src={p?.avatar_url || demo.avatar} alt="Foto de perfil" />
+            <img
+              src={p?.avatar_url || (isDemo ? exampleAvatar : demo.avatar)}
+              alt="Foto de perfil"
+            />
           </div>
           <p className="eyebrow">@{publicUsername}</p>
           <h1>{publicName}</h1>
@@ -1013,7 +1018,7 @@ function AppRoutes() {
   return (
     <Routes>
       <Route path="/" element={<LandingPage />} />
-      <Route path="/gustavocouto" element={<PublicPage />} />
+      <Route path="/camilanogueira" element={<PublicPage />} />
       <Route path="/u/:username" element={<PublicPage />} />
       <Route
         path="/login"
