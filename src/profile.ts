@@ -1,4 +1,4 @@
-import { BriefcaseBusiness, Github, Instagram, Linkedin, Mail, Youtube } from 'lucide-react'
+import { BriefcaseBusiness, Github, Instagram, Linkedin, Youtube } from 'lucide-react'
 
 export const profile = {
   name: 'Gustavo Henrique',
@@ -18,6 +18,5 @@ export const profile = {
     { label: 'Instagram', url: 'https://instagram.com/gullhenrique', icon: Instagram },
     { label: 'YouTube', url: 'https://youtube.com/channel/UC3IVbz0Q59YheP2P8LyWyPQ', icon: Youtube },
     { label: 'LinkedIn', url: 'https://linkedin.com/in/gustavohenriquedc', icon: Linkedin },
-    { label: 'E-mail', url: 'mailto:contato@gustavohenrique.dev', icon: Mail },
   ],
 }
