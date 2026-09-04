@@ -13,7 +13,10 @@ import {
   ArrowRight,
   ArrowDown,
   ArrowUp,
+  BarChart3,
+  CalendarClock,
   Check,
+  Copy,
   Eye,
   EyeOff,
   ExternalLink,
@@ -28,6 +31,7 @@ import {
   Moon,
   Palette,
   Plus,
+  QrCode,
   Save,
   Settings,
   Share2,
@@ -73,6 +77,7 @@ import {
   verticalListSortingStrategy,
 } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
+import QRCode from "qrcode";
 import { isSupabaseConfigured, supabase } from "./lib/supabase";
 import { profile as demo } from "./profile";
 
@@ -90,6 +95,7 @@ type Profile = {
   show_role: boolean;
   show_location: boolean;
   accent_color: string;
+  theme_preset: "mint" | "ocean" | "sunset" | "mono";
   theme: "system" | "dark" | "light";
 };
 type UserLink = {
@@ -102,6 +108,9 @@ type UserLink = {
   position: number;
   is_featured: boolean;
   is_visible: boolean;
+  link_style: "default" | "outline" | "glass" | "solid";
+  starts_at: string | null;
+  ends_at: string | null;
 };
 const emptyProfile: Profile = {
   id: "",
@@ -117,6 +126,7 @@ const emptyProfile: Profile = {
   show_role: true,
   show_location: false,
   accent_color: "#6ef5a8",
+  theme_preset: "mint",
   theme: "system",
 };
 const exampleAvatar = `${import.meta.env.BASE_URL}perfil-exemplo.png`;
@@ -384,6 +394,9 @@ function Dashboard({ session }: { session: Session }) {
   const [zoom, setZoom] = useState(1);
   const [croppedArea, setCroppedArea] = useState<Area | null>(null);
   const [notice, setNotice] = useState("");
+  const [dirty, setDirty] = useState(false);
+  const [stats, setStats] = useState({ views: 0, clicks: 0 });
+  const [qrCode, setQrCode] = useState("");
   const systemTheme = useSystemTheme();
   const resolvedTheme =
     profile.theme === "system" ? systemTheme : profile.theme;
@@ -399,6 +412,14 @@ function Dashboard({ session }: { session: Session }) {
   useEffect(() => {
     void load();
   }, [session.user.id]);
+  useEffect(() => {
+    function warnBeforeLeaving(event: BeforeUnloadEvent) {
+      if (!dirty) return;
+      event.preventDefault();
+    }
+    window.addEventListener("beforeunload", warnBeforeLeaving);
+    return () => window.removeEventListener("beforeunload", warnBeforeLeaving);
+  }, [dirty]);
   async function load() {
     const { data: p } = await supabase
       .from("profiles")
@@ -426,11 +447,24 @@ function Dashboard({ session }: { session: Session }) {
           client_id: link.id || crypto.randomUUID(),
         })),
       );
+      const [{ count: views }, { count: clicks }] = await Promise.all([
+        supabase
+          .from("page_views")
+          .select("id", { count: "exact", head: true })
+          .eq("profile_id", session.user.id),
+        supabase
+          .from("link_clicks")
+          .select("id", { count: "exact", head: true })
+          .eq("profile_id", session.user.id),
+      ]);
+      setStats({ views: views || 0, clicks: clicks || 0 });
     }
+    setDirty(false);
     setLoading(false);
   }
   function update<K extends keyof Profile>(key: K, value: Profile[K]) {
     setProfile({ ...profile, [key]: value });
+    setDirty(true);
   }
   function updateLink(
     i: number,
@@ -438,6 +472,7 @@ function Dashboard({ session }: { session: Session }) {
     value: string | boolean | number,
   ) {
     setLinks(links.map((l, n) => (n === i ? { ...l, [key]: value } : l)));
+    setDirty(true);
   }
   function addLink() {
     setLinks([
@@ -450,8 +485,32 @@ function Dashboard({ session }: { session: Session }) {
         position: links.length,
         is_featured: false,
         is_visible: true,
+        link_style: "default",
+        starts_at: null,
+        ends_at: null,
       },
     ]);
+    setDirty(true);
+  }
+  function duplicateLink(index: number) {
+    const copy = {
+      ...links[index],
+      id: undefined,
+      client_id: crypto.randomUUID(),
+      title: `${links[index].title || "Novo link"} — cópia`,
+    };
+    const next = [...links];
+    next.splice(index + 1, 0, copy);
+    setLinks(next.map((link, position) => ({ ...link, position })));
+    setDirty(true);
+  }
+  function removeLink(index: number) {
+    setLinks(
+      links
+        .filter((_, current) => current !== index)
+        .map((link, position) => ({ ...link, position })),
+    );
+    setDirty(true);
   }
   function moveLink(from: number, to: number) {
     if (to < 0 || to >= links.length) return;
@@ -461,6 +520,7 @@ function Dashboard({ session }: { session: Session }) {
         position,
       })),
     );
+    setDirty(true);
   }
   function finishDragging(event: DragEndEvent) {
     const { active, over } = event;
@@ -579,6 +639,9 @@ function Dashboard({ session }: { session: Session }) {
           position: i,
           is_featured: l.is_featured,
           is_visible: l.is_visible,
+          link_style: l.link_style || "default",
+          starts_at: l.starts_at || null,
+          ends_at: l.ends_at || null,
         }));
       const { error } = await supabase.from("links").insert(payload);
       if (error) {
@@ -589,7 +652,17 @@ function Dashboard({ session }: { session: Session }) {
     }
     setProfile(clean);
     setNotice("Alterações publicadas!");
+    setDirty(false);
     setSaving(false);
+  }
+  async function createQrCode() {
+    const url = `${window.location.origin}${import.meta.env.BASE_URL}${profile.username}`;
+    const image = await QRCode.toDataURL(url, {
+      width: 900,
+      margin: 2,
+      color: { dark: "#101418", light: "#ffffff" },
+    });
+    setQrCode(image);
   }
   if (loading)
     return (
@@ -602,6 +675,17 @@ function Dashboard({ session }: { session: Session }) {
       <header className="dashboard-top">
         <Brand />
         <div>
+          {dirty && (
+            <span className="unsaved-badge">Alterações não salvas</span>
+          )}
+          <button
+            className="icon-button"
+            onClick={createQrCode}
+            title="Gerar QR Code"
+            aria-label="Gerar QR Code da página"
+          >
+            <QrCode size={18} />
+          </button>
           <a
             className="preview-button"
             href={`${import.meta.env.BASE_URL}${profile.username}`}
@@ -640,6 +724,9 @@ function Dashboard({ session }: { session: Session }) {
             </a>
             <a href="#aparencia">
               <Palette /> Aparência
+            </a>
+            <a href="#estatisticas">
+              <BarChart3 /> Estatísticas
             </a>
           </nav>
         </aside>
@@ -749,11 +836,8 @@ function Dashboard({ session }: { session: Session }) {
                       total={links.length}
                       onUpdate={(key, value) => updateLink(index, key, value)}
                       onMove={(direction) => moveLink(index, index + direction)}
-                      onRemove={() =>
-                        setLinks(
-                          links.filter((_, current) => current !== index),
-                        )
-                      }
+                      onDuplicate={() => duplicateLink(index)}
+                      onRemove={() => removeLink(index)}
                     />
                   ))}
                 </div>
@@ -811,6 +895,53 @@ function Dashboard({ session }: { session: Session }) {
                 </button>
               </div>
             </div>
+            <div className="preset-picker">
+              <span>Tema completo</span>
+              <div>
+                {(
+                  [
+                    ["mint", "Menta"],
+                    ["ocean", "Oceano"],
+                    ["sunset", "Pôr do sol"],
+                    ["mono", "Monocromático"],
+                  ] as const
+                ).map(([value, label]) => (
+                  <button
+                    type="button"
+                    key={value}
+                    className={`preset-option preset-${value}${profile.theme_preset === value ? " active" : ""}`}
+                    onClick={() => update("theme_preset", value)}
+                  >
+                    <i /> {label}
+                  </button>
+                ))}
+              </div>
+            </div>
+          </EditorSection>
+          <EditorSection
+            id="estatisticas"
+            icon={<BarChart3 />}
+            title="Estatísticas"
+            description="Acompanhe o alcance da sua página e dos seus links."
+          >
+            <div className="stats-grid">
+              <div>
+                <span>Visualizações</span>
+                <strong>{stats.views}</strong>
+              </div>
+              <div>
+                <span>Cliques</span>
+                <strong>{stats.clicks}</strong>
+              </div>
+              <div>
+                <span>Taxa de cliques</span>
+                <strong>
+                  {stats.views
+                    ? `${Math.round((stats.clicks / stats.views) * 100)}%`
+                    : "0%"}
+                </strong>
+              </div>
+            </div>
           </EditorSection>
           <div className="save-bar">
             {notice && (
@@ -853,7 +984,40 @@ function Dashboard({ session }: { session: Session }) {
             />
           )}
         </section>
+        <LiveProfilePreview
+          profile={profile}
+          links={links}
+          resolvedTheme={resolvedTheme}
+        />
       </div>
+      {qrCode && (
+        <div
+          className="qr-backdrop"
+          role="presentation"
+          onMouseDown={() => setQrCode("")}
+        >
+          <section
+            className="qr-modal"
+            role="dialog"
+            aria-modal="true"
+            onMouseDown={(event) => event.stopPropagation()}
+          >
+            <button onClick={() => setQrCode("")} aria-label="Fechar">
+              ×
+            </button>
+            <span className="kicker">Compartilhar página</span>
+            <h2>Seu QR Code está pronto</h2>
+            <p>Aponte a câmera para abrir diretamente a sua página.</p>
+            <img src={qrCode} alt="QR Code da página" />
+            <a
+              href={qrCode}
+              download={`qrcode-${profile.username || "pagina"}.png`}
+            >
+              Baixar QR Code
+            </a>
+          </section>
+        </div>
+      )}
     </main>
   );
 }
@@ -864,6 +1028,7 @@ function SortableLinkEditor({
   total,
   onUpdate,
   onMove,
+  onDuplicate,
   onRemove,
 }: {
   link: UserLink;
@@ -871,6 +1036,7 @@ function SortableLinkEditor({
   total: number;
   onUpdate: (key: keyof UserLink, value: string | boolean | number) => void;
   onMove: (direction: -1 | 1) => void;
+  onDuplicate: () => void;
   onRemove: () => void;
 }) {
   const {
@@ -950,11 +1116,141 @@ function SortableLinkEditor({
         >
           {link.is_visible ? <Eye /> : <EyeOff />}
         </button>
+        <button type="button" onClick={onDuplicate} title="Duplicar link">
+          <Copy />
+        </button>
         <button type="button" onClick={onRemove} title="Remover">
           <Trash2 />
         </button>
       </div>
+      <details className="link-advanced">
+        <summary>
+          <CalendarClock /> Agendamento e estilo
+        </summary>
+        <div>
+          <label>
+            Estilo
+            <select
+              value={link.link_style || "default"}
+              onChange={(event) => onUpdate("link_style", event.target.value)}
+            >
+              <option value="default">Padrão</option>
+              <option value="outline">Contorno</option>
+              <option value="glass">Vidro</option>
+              <option value="solid">Destaque sólido</option>
+            </select>
+          </label>
+          <label>
+            Mostrar a partir de
+            <input
+              type="datetime-local"
+              value={toDateTimeLocal(link.starts_at)}
+              onChange={(event) =>
+                onUpdate(
+                  "starts_at",
+                  event.target.value
+                    ? new Date(event.target.value).toISOString()
+                    : "",
+                )
+              }
+            />
+          </label>
+          <label>
+            Ocultar depois de
+            <input
+              type="datetime-local"
+              value={toDateTimeLocal(link.ends_at)}
+              onChange={(event) =>
+                onUpdate(
+                  "ends_at",
+                  event.target.value
+                    ? new Date(event.target.value).toISOString()
+                    : "",
+                )
+              }
+            />
+          </label>
+        </div>
+      </details>
     </div>
+  );
+}
+
+function toDateTimeLocal(value: string | null) {
+  if (!value) return "";
+  const date = new Date(value);
+  const local = new Date(date.getTime() - date.getTimezoneOffset() * 60000);
+  return local.toISOString().slice(0, 16);
+}
+
+function isLinkActive(link: UserLink) {
+  const now = Date.now();
+  return (
+    link.is_visible &&
+    (!link.starts_at || new Date(link.starts_at).getTime() <= now) &&
+    (!link.ends_at || new Date(link.ends_at).getTime() >= now)
+  );
+}
+
+function LiveProfilePreview({
+  profile,
+  links,
+  resolvedTheme,
+}: {
+  profile: Profile;
+  links: UserLink[];
+  resolvedTheme: "dark" | "light";
+}) {
+  const visibleLinks = links.filter(isLinkActive).slice(0, 5);
+  return (
+    <aside className="live-preview-column">
+      <div className="live-preview-heading">
+        <span>
+          <Eye size={16} /> Prévia ao vivo
+        </span>
+        <small>Atualiza enquanto você edita</small>
+      </div>
+      <div
+        className={`live-phone live-${resolvedTheme} preset-${profile.theme_preset}`}
+        style={{ "--accent": profile.accent_color } as React.CSSProperties}
+      >
+        {profile.banner_url && (
+          <img className="live-banner" src={profile.banner_url} alt="" />
+        )}
+        <div className="live-profile">
+          <img
+            className="live-avatar"
+            src={profile.avatar_url || defaultAvatar}
+            alt=""
+          />
+          {profile.instagram_handle && <span>@{profile.instagram_handle}</span>}
+          <h3>{profile.display_name || "Seu nome"}</h3>
+          {profile.show_role && profile.role && <p>{profile.role}</p>}
+          {profile.show_bio && profile.bio && <small>{profile.bio}</small>}
+          {profile.show_location && profile.location && (
+            <small>
+              <MapPin size={11} /> {profile.location}
+            </small>
+          )}
+        </div>
+        <div className="live-links">
+          {visibleLinks.length ? (
+            visibleLinks.map((link) => (
+              <div
+                key={link.client_id || link.id}
+                className={`live-link style-${link.link_style || "default"}${link.is_featured ? " featured" : ""}`}
+              >
+                <AutomaticLinkIcon url={link.url} />
+                <span>{link.title || "Novo link"}</span>
+                <b>↗</b>
+              </div>
+            ))
+          ) : (
+            <p className="live-empty">Seus links aparecerão aqui.</p>
+          )}
+        </div>
+      </div>
+    </aside>
   );
 }
 
@@ -1079,7 +1375,7 @@ function CropImageModal({
             crop={crop}
             zoom={zoom}
             aspect={kind === "avatar" ? 1 : 3.2}
-            cropShape="rect"
+            cropShape={kind === "avatar" ? "round" : "rect"}
             showGrid
             onCropChange={onCropChange}
             onZoomChange={onZoomChange}
@@ -1478,6 +1774,11 @@ function PublicPage({ session }: { session: Session | null }) {
           .eq("is_visible", true)
           .order("position");
         setData({ profile: p, links: l || [] });
+        const viewKey = `linksdev-view-${p.id}`;
+        if (!sessionStorage.getItem(viewKey)) {
+          sessionStorage.setItem(viewKey, "1");
+          void supabase.from("page_views").insert({ profile_id: p.id });
+        }
       }
       setLoading(false);
     })();
@@ -1510,19 +1811,31 @@ function PublicPage({ session }: { session: Session | null }) {
     p?.theme === "system"
       ? systemTheme
       : p?.theme || (isDemo ? "dark" : systemTheme);
-  const shownLinks =
+  const shownLinks = (
     data?.links ||
     demo.links.map((l, i) => ({
       title: l.label,
+      id: undefined,
       description: l.description,
       url: l.url,
       position: i,
       is_featured: Boolean(l.featured),
       is_visible: true,
-    }));
+      link_style: "default" as const,
+      starts_at: null,
+      ends_at: null,
+    }))
+  ).filter(isLinkActive);
+  function trackClick(link: UserLink) {
+    if (!p) return;
+    void supabase.from("link_clicks").insert({
+      profile_id: p.id,
+      link_id: link.id || null,
+    });
+  }
   return (
     <main
-      className={`page-shell ${resolvedTheme === "light" ? "public-light" : ""}`}
+      className={`page-shell preset-${p?.theme_preset || "mint"} ${resolvedTheme === "light" ? "public-light" : ""}`}
       style={
         {
           "--accent": p?.accent_color || "#6ef5a8",
@@ -1599,11 +1912,12 @@ function PublicPage({ session }: { session: Session | null }) {
         <div className="links-list">
           {shownLinks.map((l, i) => (
             <a
-              className={`profile-link${l.is_featured ? " featured" : ""}`}
+              className={`profile-link style-${l.link_style || "default"}${l.is_featured ? " featured" : ""}`}
               href={l.url}
               target="_blank"
               rel="noreferrer"
-              key={i}
+              key={l.id || i}
+              onClick={() => trackClick(l)}
             >
               <span className="link-icon">
                 <AutomaticLinkIcon url={l.url} />
