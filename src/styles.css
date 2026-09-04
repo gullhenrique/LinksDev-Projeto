@@ -1330,8 +1330,16 @@ footer p {
   font-weight: 700;
   border: 1px solid rgba(255, 255, 255, 0.1);
   border-radius: 99px;
-  background: #14171c;
-  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.25);
+  background: linear-gradient(
+    135deg,
+    rgba(255, 255, 255, 0.09),
+    rgba(255, 255, 255, 0.025)
+  );
+  box-shadow:
+    0 10px 30px rgba(0, 0, 0, 0.25),
+    inset 0 1px 0 rgba(255, 255, 255, 0.08);
+  -webkit-backdrop-filter: blur(14px) saturate(135%);
+  backdrop-filter: blur(14px) saturate(135%);
 }
 .audience-cloud span:nth-child(1) {
   top: 16%;
@@ -1360,6 +1368,95 @@ footer p {
 .audience-cloud span:nth-child(7) {
   top: 10%;
   right: 8%;
+}
+@media (prefers-reduced-motion: no-preference) {
+  .browser-frame {
+    animation: showcase-float 5.5s ease-in-out infinite;
+    will-change: transform;
+  }
+  .floating-note {
+    animation:
+      note-pop 0.72s cubic-bezier(0.2, 1.45, 0.35, 1) both,
+      note-float 4.2s ease-in-out 0.72s infinite;
+    will-change: transform, opacity;
+  }
+  .note-one {
+    animation-delay: 0.35s, 1.07s;
+  }
+  .note-two {
+    animation-delay: 0.58s, 1.3s;
+  }
+  .audience-cloud span {
+    animation: glass-chip-float 4.6s ease-in-out infinite;
+    transition:
+      border-color 0.25s ease,
+      background-color 0.25s ease,
+      box-shadow 0.25s ease;
+    will-change: transform;
+  }
+  .audience-cloud span:nth-child(2n) {
+    animation-delay: -1.4s;
+  }
+  .audience-cloud span:nth-child(3n) {
+    animation-delay: -2.8s;
+  }
+  .audience-cloud span:hover {
+    border-color: rgba(121, 242, 173, 0.42);
+    background: rgba(121, 242, 173, 0.12);
+    box-shadow:
+      0 16px 38px rgba(0, 0, 0, 0.32),
+      0 0 24px rgba(121, 242, 173, 0.1);
+  }
+  @keyframes showcase-float {
+    0%,
+    100% {
+      transform: translateY(0) rotate(2deg);
+    }
+    50% {
+      transform: translateY(-13px) rotate(1deg);
+    }
+  }
+  @keyframes showcase-mobile-float {
+    0%,
+    100% {
+      transform: translateY(0);
+    }
+    50% {
+      transform: translateY(-9px);
+    }
+  }
+  @keyframes note-pop {
+    from {
+      opacity: 0;
+      transform: translateY(18px) scale(0.55);
+    }
+    70% {
+      opacity: 1;
+      transform: translateY(-4px) scale(1.07);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0) scale(1);
+    }
+  }
+  @keyframes note-float {
+    0%,
+    100% {
+      transform: translateY(0);
+    }
+    50% {
+      transform: translateY(-7px);
+    }
+  }
+  @keyframes glass-chip-float {
+    0%,
+    100% {
+      transform: translateY(0);
+    }
+    50% {
+      transform: translateY(-9px);
+    }
+  }
 }
 .landing-final {
   width: min(100% - 40px, 1180px);
@@ -1492,6 +1589,7 @@ footer p {
   .browser-frame {
     width: 92%;
     transform: none;
+    animation-name: showcase-mobile-float;
   }
   .floating-note {
     display: none;
