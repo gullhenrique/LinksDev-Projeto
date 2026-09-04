@@ -1090,6 +1090,98 @@ footer p {
 .public-light .profile-link:hover {
   background: rgba(17, 24, 39, 0.085);
 }
+.dashboard-dark {
+  color: #f3f5f7;
+  background: #0b0d11;
+}
+.dashboard-dark .app-brand,
+.dashboard-dark aside h1,
+.dashboard-dark .editor-card h2 {
+  color: #f3f5f7;
+}
+.dashboard-dark .dashboard-top {
+  border-color: rgba(255, 255, 255, 0.09);
+  background: rgba(13, 16, 21, 0.9);
+}
+.dashboard-dark .preview-button,
+.dashboard-dark .icon-button,
+.dashboard-dark .open-page-button {
+  color: #e5e8ed;
+  border-color: rgba(255, 255, 255, 0.11);
+  background: rgba(255, 255, 255, 0.055);
+}
+.dashboard-dark aside > p,
+.dashboard-dark .editor-card header p {
+  color: #929aa7;
+}
+.dashboard-dark aside nav a {
+  color: #aab1bc;
+}
+.dashboard-dark aside nav a:hover {
+  color: #8cf4b9;
+  background: rgba(64, 220, 134, 0.1);
+}
+.dashboard-dark .editor-card {
+  border-color: rgba(255, 255, 255, 0.09);
+  background: #13161c;
+  box-shadow: 0 12px 35px rgba(0, 0, 0, 0.18);
+}
+.dashboard-dark .editor-card > header > span {
+  color: #78efaa;
+  background: rgba(73, 220, 139, 0.12);
+}
+.dashboard-dark .field,
+.dashboard-dark .appearance-row > label {
+  color: #cbd0d8;
+}
+.dashboard-dark .field input,
+.dashboard-dark .link-editor input,
+.dashboard-dark .prefixed,
+.dashboard-dark .media-upload {
+  color: #f1f3f5;
+  border-color: rgba(255, 255, 255, 0.1);
+  background: #191d24;
+}
+.dashboard-dark .prefixed input {
+  background: transparent;
+}
+.dashboard-dark .prefixed span,
+.dashboard-dark .media-upload small {
+  color: #858e9c;
+}
+.dashboard-dark .toggle-row,
+.dashboard-dark .link-editor {
+  color: #c8ced7;
+  border-color: rgba(255, 255, 255, 0.1);
+  background: #171a20;
+}
+.dashboard-dark .media-upload strong {
+  color: #e8ebef;
+}
+.dashboard-dark .media-preview {
+  color: #939ca9;
+  background: #252a33;
+}
+.dashboard-dark .theme-choice {
+  color: #aeb5c0;
+  border-color: rgba(255, 255, 255, 0.1);
+  background: #191d24;
+}
+.dashboard-dark .theme-choice.active {
+  color: #8af2b7;
+  border-color: rgba(101, 218, 162, 0.55);
+  background: rgba(57, 206, 124, 0.11);
+}
+.dashboard-dark .save-bar {
+  border-color: rgba(255, 255, 255, 0.1);
+  background: rgba(19, 22, 28, 0.94);
+  box-shadow: 0 15px 45px rgba(0, 0, 0, 0.35);
+}
+.dashboard-dark .remove-media-button {
+  color: #ffaaa2;
+  border-color: rgba(255, 135, 125, 0.2);
+  background: rgba(255, 99, 89, 0.08);
+}
 .crop-modal-backdrop {
   position: fixed;
   inset: 0;

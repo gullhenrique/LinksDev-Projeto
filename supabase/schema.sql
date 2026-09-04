@@ -14,7 +14,7 @@ create table if not exists public.profiles (
   show_role boolean not null default true,
   show_location boolean not null default false,
   accent_color text not null default '#6ef5a8',
-  theme text not null default 'dark' check (theme in ('dark', 'light')),
+  theme text not null default 'system' check (theme in ('system', 'dark', 'light')),
   updated_at timestamptz not null default now()
 );
 

@@ -69,7 +69,7 @@ type Profile = {
   show_role: boolean;
   show_location: boolean;
   accent_color: string;
-  theme: "dark" | "light";
+  theme: "system" | "dark" | "light";
 };
 type UserLink = {
   id?: string;
@@ -95,7 +95,7 @@ const emptyProfile: Profile = {
   show_role: true,
   show_location: false,
   accent_color: "#6ef5a8",
-  theme: "dark",
+  theme: "system",
 };
 const exampleAvatar = `${import.meta.env.BASE_URL}perfil-exemplo.png`;
 
@@ -105,6 +105,21 @@ function Brand() {
       <Sparkles size={18} /> LinksDev
     </Link>
   );
+}
+
+function useSystemTheme() {
+  const [theme, setTheme] = useState<"dark" | "light">(() =>
+    window.matchMedia("(prefers-color-scheme: dark)").matches
+      ? "dark"
+      : "light",
+  );
+  useEffect(() => {
+    const query = window.matchMedia("(prefers-color-scheme: dark)");
+    const updateTheme = () => setTheme(query.matches ? "dark" : "light");
+    query.addEventListener("change", updateTheme);
+    return () => query.removeEventListener("change", updateTheme);
+  }, []);
+  return theme;
 }
 
 function AuthPage() {
@@ -346,6 +361,9 @@ function Dashboard({ session }: { session: Session }) {
   const [zoom, setZoom] = useState(1);
   const [croppedArea, setCroppedArea] = useState<Area | null>(null);
   const [notice, setNotice] = useState("");
+  const systemTheme = useSystemTheme();
+  const resolvedTheme =
+    profile.theme === "system" ? systemTheme : profile.theme;
   useEffect(() => {
     void load();
   }, [session.user.id]);
@@ -526,7 +544,7 @@ function Dashboard({ session }: { session: Session }) {
       </main>
     );
   return (
-    <main className="dashboard">
+    <main className={`dashboard dashboard-${resolvedTheme}`}>
       <header className="dashboard-top">
         <Brand />
         <div>
@@ -634,6 +652,7 @@ function Dashboard({ session }: { session: Session }) {
                 label="Profissão ou título"
                 value={profile.role}
                 onChange={(v) => update("role", v)}
+                placeholder="Ex.: Fotógrafa, Designer, Criador de conteúdo"
               />
               <Toggle
                 label="Exibir profissão"
@@ -726,6 +745,16 @@ function Dashboard({ session }: { session: Session }) {
                 />
               </label>
               <div>
+                <button
+                  className={
+                    profile.theme === "system"
+                      ? "theme-choice active"
+                      : "theme-choice"
+                  }
+                  onClick={() => update("theme", "system")}
+                >
+                  <MonitorSmartphone /> Sistema
+                </button>
                 <button
                   className={
                     profile.theme === "dark"
@@ -1023,19 +1052,25 @@ function Field({
   onChange,
   wide,
   prefix,
+  placeholder,
 }: {
   label: string;
   value: string;
   onChange: (v: string) => void;
   wide?: boolean;
   prefix?: string;
+  placeholder?: string;
 }) {
   return (
     <label className={wide ? "field wide" : "field"}>
       {label}
       <div className={prefix ? "prefixed" : ""}>
         {prefix && <span>{prefix}</span>}
-        <input value={value} onChange={(e) => onChange(e.target.value)} />
+        <input
+          value={value}
+          placeholder={placeholder}
+          onChange={(e) => onChange(e.target.value)}
+        />
       </div>
     </label>
   );
@@ -1281,6 +1316,7 @@ function PublicPage({ session }: { session: Session | null }) {
     links: UserLink[];
   } | null>(null);
   const [loading, setLoading] = useState(Boolean(username));
+  const systemTheme = useSystemTheme();
   useEffect(() => {
     if (!username || username === "camilanogueira") {
       setLoading(false);
@@ -1328,6 +1364,10 @@ function PublicPage({ session }: { session: Session | null }) {
     : isDemo
       ? "camilanogueira"
       : "";
+  const resolvedTheme =
+    p?.theme === "system"
+      ? systemTheme
+      : p?.theme || (isDemo ? "dark" : systemTheme);
   const shownLinks =
     data?.links ||
     demo.links.map((l, i) => ({
@@ -1340,7 +1380,7 @@ function PublicPage({ session }: { session: Session | null }) {
     }));
   return (
     <main
-      className={`page-shell ${p?.theme === "light" ? "public-light" : ""}`}
+      className={`page-shell ${resolvedTheme === "light" ? "public-light" : ""}`}
       style={
         {
           "--accent": p?.accent_color || "#6ef5a8",
