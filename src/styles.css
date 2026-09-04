@@ -764,18 +764,53 @@ footer p {
   gap: 12px;
 }
 .link-editor {
+  position: relative;
   display: grid;
-  grid-template-columns: 20px 1fr 32px;
+  grid-template-columns: 32px 30px minmax(0, 1fr) 70px;
+  align-items: center;
   gap: 10px;
   padding: 13px;
   border: 1px solid #e3e6ea;
   border-radius: 15px;
   background: #fafbfc;
 }
-.link-editor .drag,
+.link-editor.dragging {
+  border-color: #66dca0;
+  box-shadow: 0 18px 40px rgba(21, 63, 43, 0.18);
+  opacity: 0.96;
+}
+.drag-handle {
+  align-self: stretch;
+  display: grid;
+  place-items: center;
+  align-content: center;
+  gap: 1px;
+  width: 32px;
+  padding: 0;
+  color: #8b939f;
+  border: 0;
+  border-radius: 9px;
+  background: transparent;
+  cursor: grab;
+  touch-action: none;
+}
+.drag-handle:active {
+  cursor: grabbing;
+}
+.drag-handle:hover {
+  color: #168b55;
+  background: rgba(22, 139, 85, 0.08);
+}
+.drag-handle svg {
+  width: 17px;
+}
+.drag-handle small {
+  font-size: 0.65rem;
+  font-weight: 800;
+}
 .detected-icon {
   align-self: center;
-  width: 17px;
+  width: 30px;
   color: #b0b6bf;
 }
 .detected-icon {
@@ -787,7 +822,7 @@ footer p {
   width: 18px;
   height: 18px;
 }
-.link-editor > div:nth-child(2) {
+.link-fields {
   display: grid;
   grid-template-columns: 1fr 1.2fr;
   gap: 8px;
@@ -802,8 +837,8 @@ footer p {
   grid-column: 1/-1;
 }
 .link-tools {
-  display: flex;
-  flex-direction: column;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
   gap: 5px;
 }
 .link-tools button {
@@ -818,8 +853,16 @@ footer p {
   cursor: pointer;
 }
 .link-tools button:hover {
+  color: #087b46;
+  background: #e2f8ed;
+}
+.link-tools button:last-child:hover {
   color: #d64b4b;
   background: #feecec;
+}
+.link-tools button:disabled {
+  opacity: 0.25;
+  cursor: not-allowed;
 }
 .link-tools svg {
   width: 16px;
@@ -1340,7 +1383,12 @@ footer p {
   .field.wide {
     grid-column: auto;
   }
-  .link-editor > div:nth-child(2) {
+  .link-editor {
+    grid-template-columns: 28px 26px minmax(0, 1fr) 64px;
+    gap: 7px;
+    padding-inline: 9px;
+  }
+  .link-fields {
     grid-template-columns: 1fr;
   }
   .link-editor input:last-child {

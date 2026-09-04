@@ -11,11 +11,14 @@ import {
 import {
   ArrowLeft,
   ArrowRight,
+  ArrowDown,
+  ArrowUp,
   Check,
   Eye,
   EyeOff,
   ExternalLink,
   Globe2,
+  GripVertical,
   ImageUp,
   Link2,
   Loader2,
@@ -52,6 +55,24 @@ import {
 } from "react-icons/fa6";
 import type { Session } from "@supabase/supabase-js";
 import Cropper, { type Area, type Point } from "react-easy-crop";
+import {
+  closestCenter,
+  DndContext,
+  KeyboardSensor,
+  PointerSensor,
+  TouchSensor,
+  useSensor,
+  useSensors,
+  type DragEndEvent,
+} from "@dnd-kit/core";
+import {
+  arrayMove,
+  SortableContext,
+  sortableKeyboardCoordinates,
+  useSortable,
+  verticalListSortingStrategy,
+} from "@dnd-kit/sortable";
+import { CSS } from "@dnd-kit/utilities";
 import { isSupabaseConfigured, supabase } from "./lib/supabase";
 import { profile as demo } from "./profile";
 
@@ -73,6 +94,7 @@ type Profile = {
 };
 type UserLink = {
   id?: string;
+  client_id?: string;
   profile_id?: string;
   title: string;
   description: string;
@@ -364,6 +386,15 @@ function Dashboard({ session }: { session: Session }) {
   const systemTheme = useSystemTheme();
   const resolvedTheme =
     profile.theme === "system" ? systemTheme : profile.theme;
+  const sensors = useSensors(
+    useSensor(PointerSensor, { activationConstraint: { distance: 6 } }),
+    useSensor(TouchSensor, {
+      activationConstraint: { delay: 180, tolerance: 6 },
+    }),
+    useSensor(KeyboardSensor, {
+      coordinateGetter: sortableKeyboardCoordinates,
+    }),
+  );
   useEffect(() => {
     void load();
   }, [session.user.id]);
@@ -388,7 +419,12 @@ function Dashboard({ session }: { session: Session }) {
         .select("*")
         .eq("profile_id", session.user.id)
         .order("position");
-      setLinks(l || []);
+      setLinks(
+        (l || []).map((link) => ({
+          ...link,
+          client_id: link.id || crypto.randomUUID(),
+        })),
+      );
     }
     setLoading(false);
   }
@@ -406,6 +442,7 @@ function Dashboard({ session }: { session: Session }) {
     setLinks([
       ...links,
       {
+        client_id: crypto.randomUUID(),
         title: "",
         description: "",
         url: "https://",
@@ -414,6 +451,22 @@ function Dashboard({ session }: { session: Session }) {
         is_visible: true,
       },
     ]);
+  }
+  function moveLink(from: number, to: number) {
+    if (to < 0 || to >= links.length) return;
+    setLinks(
+      arrayMove(links, from, to).map((link, position) => ({
+        ...link,
+        position,
+      })),
+    );
+  }
+  function finishDragging(event: DragEndEvent) {
+    const { active, over } = event;
+    if (!over || active.id === over.id) return;
+    const from = links.findIndex((link) => link.client_id === active.id);
+    const to = links.findIndex((link) => link.client_id === over.id);
+    if (from >= 0 && to >= 0) moveLink(from, to);
   }
   function chooseMedia(
     event: ChangeEvent<HTMLInputElement>,
@@ -677,54 +730,34 @@ function Dashboard({ session }: { session: Session }) {
             title="Links"
             description="Adicione sites, redes, vídeos, lojas ou qualquer endereço."
           >
-            <div className="link-editor-list">
-              {links.map((l, i) => (
-                <div className="link-editor" key={i}>
-                  <span className="detected-icon" title="Ícone identificado">
-                    <AutomaticLinkIcon url={l.url} />
-                  </span>
-                  <div>
-                    <input
-                      aria-label="Título do link"
-                      value={l.title}
-                      onChange={(e) => updateLink(i, "title", e.target.value)}
-                      placeholder="Título do link"
-                    />
-                    <input
-                      aria-label="Endereço do link"
-                      value={l.url}
-                      onChange={(e) => updateLink(i, "url", e.target.value)}
-                      onBlur={(e) =>
-                        updateLink(i, "url", normalizeUrl(e.target.value))
+            <DndContext
+              sensors={sensors}
+              collisionDetection={closestCenter}
+              onDragEnd={finishDragging}
+            >
+              <SortableContext
+                items={links.map((link) => link.client_id!)}
+                strategy={verticalListSortingStrategy}
+              >
+                <div className="link-editor-list">
+                  {links.map((link, index) => (
+                    <SortableLinkEditor
+                      key={link.client_id}
+                      link={link}
+                      index={index}
+                      total={links.length}
+                      onUpdate={(key, value) => updateLink(index, key, value)}
+                      onMove={(direction) => moveLink(index, index + direction)}
+                      onRemove={() =>
+                        setLinks(
+                          links.filter((_, current) => current !== index),
+                        )
                       }
-                      placeholder="https://..."
                     />
-                    <input
-                      aria-label="Descrição do link"
-                      value={l.description}
-                      onChange={(e) =>
-                        updateLink(i, "description", e.target.value)
-                      }
-                      placeholder="Descrição opcional"
-                    />
-                  </div>
-                  <div className="link-tools">
-                    <button
-                      onClick={() => updateLink(i, "is_visible", !l.is_visible)}
-                      title={l.is_visible ? "Ocultar" : "Exibir"}
-                    >
-                      {l.is_visible ? <Eye /> : <EyeOff />}
-                    </button>
-                    <button
-                      onClick={() => setLinks(links.filter((_, n) => n !== i))}
-                      title="Remover"
-                    >
-                      <Trash2 />
-                    </button>
-                  </div>
+                  ))}
                 </div>
-              ))}
-            </div>
+              </SortableContext>
+            </DndContext>
             <button className="add-button" onClick={addLink}>
               <Plus size={18} /> Adicionar link
             </button>
@@ -821,6 +854,106 @@ function Dashboard({ session }: { session: Session }) {
         </section>
       </div>
     </main>
+  );
+}
+
+function SortableLinkEditor({
+  link,
+  index,
+  total,
+  onUpdate,
+  onMove,
+  onRemove,
+}: {
+  link: UserLink;
+  index: number;
+  total: number;
+  onUpdate: (key: keyof UserLink, value: string | boolean | number) => void;
+  onMove: (direction: -1 | 1) => void;
+  onRemove: () => void;
+}) {
+  const {
+    attributes,
+    listeners,
+    setNodeRef,
+    transform,
+    transition,
+    isDragging,
+  } = useSortable({ id: link.client_id! });
+  return (
+    <div
+      ref={setNodeRef}
+      className={`link-editor${isDragging ? " dragging" : ""}`}
+      style={{
+        transform: CSS.Transform.toString(transform),
+        transition,
+        zIndex: isDragging ? 2 : undefined,
+      }}
+    >
+      <button
+        className="drag-handle"
+        type="button"
+        title={`Arrastar link ${index + 1}`}
+        aria-label={`Arrastar link ${index + 1} de ${total}`}
+        {...attributes}
+        {...listeners}
+      >
+        <GripVertical />
+        <small>{index + 1}</small>
+      </button>
+      <span className="detected-icon" title="Ícone identificado">
+        <AutomaticLinkIcon url={link.url} />
+      </span>
+      <div className="link-fields">
+        <input
+          aria-label="Título do link"
+          value={link.title}
+          onChange={(event) => onUpdate("title", event.target.value)}
+          placeholder="Título do link"
+        />
+        <input
+          aria-label="Endereço do link"
+          value={link.url}
+          onChange={(event) => onUpdate("url", event.target.value)}
+          onBlur={(event) => onUpdate("url", normalizeUrl(event.target.value))}
+          placeholder="https://..."
+        />
+        <input
+          aria-label="Descrição do link"
+          value={link.description}
+          onChange={(event) => onUpdate("description", event.target.value)}
+          placeholder="Descrição opcional"
+        />
+      </div>
+      <div className="link-tools">
+        <button
+          type="button"
+          onClick={() => onMove(-1)}
+          title="Mover para cima"
+          disabled={index === 0}
+        >
+          <ArrowUp />
+        </button>
+        <button
+          type="button"
+          onClick={() => onMove(1)}
+          title="Mover para baixo"
+          disabled={index === total - 1}
+        >
+          <ArrowDown />
+        </button>
+        <button
+          type="button"
+          onClick={() => onUpdate("is_visible", !link.is_visible)}
+          title={link.is_visible ? "Ocultar" : "Exibir"}
+        >
+          {link.is_visible ? <Eye /> : <EyeOff />}
+        </button>
+        <button type="button" onClick={onRemove} title="Remover">
+          <Trash2 />
+        </button>
+      </div>
+    </div>
   );
 }
 
