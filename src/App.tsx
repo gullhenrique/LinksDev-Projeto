@@ -94,6 +94,10 @@ function AuthPage() {
   const [awaitingCode, setAwaitingCode] = useState(false);
   const [message, setMessage] = useState("");
   const [loading, setLoading] = useState(false);
+  const passwordMismatch =
+    mode === "signup" &&
+    confirmPassword.length > 0 &&
+    password !== confirmPassword;
   const navigate = useNavigate();
   async function submit(e: FormEvent) {
     e.preventDefault();
@@ -248,17 +252,37 @@ function AuthPage() {
             <label>
               Confirmar senha
               <input
+                className={passwordMismatch ? "input-error" : undefined}
                 type="password"
                 value={confirmPassword}
-                onChange={(e) => setConfirmPassword(e.target.value)}
+                onChange={(e) => {
+                  setConfirmPassword(e.target.value);
+                  if (message.startsWith("As senhas")) setMessage("");
+                }}
                 placeholder="Digite a mesma senha novamente"
                 minLength={6}
+                aria-invalid={passwordMismatch}
+                aria-describedby={
+                  passwordMismatch ? "password-error" : undefined
+                }
                 required
               />
+              {passwordMismatch && (
+                <span className="field-error" id="password-error">
+                  As senhas precisam ser iguais.
+                </span>
+              )}
             </label>
           )}
           {message && <p className="form-message">{message}</p>}
-          <button className="primary-button" disabled={loading}>
+          <button
+            className="primary-button"
+            disabled={
+              loading ||
+              (mode === "signup" &&
+                (confirmPassword.length === 0 || passwordMismatch))
+            }
+          >
             {loading ? (
               <Loader2 className="spin" size={18} />
             ) : mode === "login" ? (
@@ -272,6 +296,7 @@ function AuthPage() {
           className="text-button"
           onClick={() => {
             setMode(mode === "login" ? "signup" : "login");
+            setConfirmPassword("");
             setMessage("");
           }}
         >

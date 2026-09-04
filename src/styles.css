@@ -453,6 +453,16 @@ footer p {
   border-color: #3be08c;
   box-shadow: 0 0 0 3px rgba(59, 224, 140, 0.1);
 }
+.auth-card input.input-error,
+.auth-card input.input-error:focus {
+  border-color: #ff8f83;
+  box-shadow: 0 0 0 3px rgba(255, 143, 131, 0.1);
+}
+.field-error {
+  color: #ffaaa0;
+  font-size: 0.78rem;
+  font-weight: 500;
+}
 .primary-button {
   min-height: 48px;
   display: inline-flex;
@@ -469,6 +479,7 @@ footer p {
 }
 .primary-button:disabled {
   opacity: 0.6;
+  cursor: not-allowed;
 }
 .text-button {
   width: 100%;
