@@ -1,4 +1,4 @@
-import { FormEvent, useEffect, useState } from "react";
+import { ChangeEvent, FormEvent, useEffect, useState } from "react";
 import {
   BrowserRouter,
   Link,
@@ -14,7 +14,9 @@ import {
   Check,
   Eye,
   EyeOff,
-  GripVertical,
+  ExternalLink,
+  Globe2,
+  ImageUp,
   Link2,
   Loader2,
   LogOut,
@@ -24,6 +26,7 @@ import {
   Palette,
   Plus,
   Save,
+  Settings,
   Share2,
   ShieldCheck,
   SlidersHorizontal,
@@ -33,6 +36,20 @@ import {
   UserRound,
   Zap,
 } from "lucide-react";
+import type { IconType } from "react-icons";
+import {
+  FaFacebookF,
+  FaGithub,
+  FaInstagram,
+  FaLinkedinIn,
+  FaPinterestP,
+  FaSpotify,
+  FaTiktok,
+  FaTwitch,
+  FaWhatsapp,
+  FaXTwitter,
+  FaYoutube,
+} from "react-icons/fa6";
 import type { Session } from "@supabase/supabase-js";
 import { isSupabaseConfigured, supabase } from "./lib/supabase";
 import { profile as demo } from "./profile";
@@ -45,6 +62,7 @@ type Profile = {
   role: string;
   location: string;
   avatar_url: string;
+  banner_url: string;
   show_bio: boolean;
   show_role: boolean;
   show_location: boolean;
@@ -69,6 +87,7 @@ const emptyProfile: Profile = {
   role: "",
   location: "",
   avatar_url: "",
+  banner_url: "",
   show_bio: true,
   show_role: true,
   show_location: false,
@@ -315,6 +334,7 @@ function Dashboard({ session }: { session: Session }) {
   const [links, setLinks] = useState<UserLink[]>([]);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [uploading, setUploading] = useState<"avatar" | "banner" | null>(null);
   const [notice, setNotice] = useState("");
   useEffect(() => {
     void load();
@@ -367,6 +387,40 @@ function Dashboard({ session }: { session: Session }) {
       },
     ]);
   }
+  async function uploadMedia(
+    event: ChangeEvent<HTMLInputElement>,
+    kind: "avatar" | "banner",
+  ) {
+    const file = event.target.files?.[0];
+    if (!file) return;
+    if (!file.type.startsWith("image/")) {
+      setNotice("Escolha um arquivo de imagem.");
+      return;
+    }
+    if (file.size > 5 * 1024 * 1024) {
+      setNotice("A imagem deve ter no máximo 5 MB.");
+      return;
+    }
+    setUploading(kind);
+    setNotice("");
+    const extension = file.name.split(".").pop()?.toLowerCase() || "jpg";
+    const path = `${session.user.id}/${kind}-${Date.now()}.${extension}`;
+    const { error } = await supabase.storage
+      .from("profile-media")
+      .upload(path, file, { contentType: file.type });
+    if (error) {
+      setNotice(`Não foi possível enviar a imagem: ${error.message}`);
+      setUploading(null);
+      return;
+    }
+    const { data } = supabase.storage.from("profile-media").getPublicUrl(path);
+    update(kind === "avatar" ? "avatar_url" : "banner_url", data.publicUrl);
+    setNotice(
+      `${kind === "avatar" ? "Foto" : "Banner"} enviado. Salve para publicar.`,
+    );
+    setUploading(null);
+    event.target.value = "";
+  }
   async function save() {
     setSaving(true);
     setNotice("");
@@ -388,7 +442,7 @@ function Dashboard({ session }: { session: Session }) {
           profile_id: session.user.id,
           title: l.title,
           description: l.description,
-          url: l.url,
+          url: normalizeUrl(l.url),
           position: i,
           is_featured: l.is_featured,
           is_visible: l.is_visible,
@@ -475,12 +529,22 @@ function Dashboard({ session }: { session: Session }) {
                 value={profile.username}
                 onChange={(v) => update("username", v)}
               />
-              <Field
-                label="Imagem (URL)"
-                value={profile.avatar_url}
-                onChange={(v) => update("avatar_url", v)}
-                wide
-              />
+              <div className="media-upload-grid wide">
+                <MediaUpload
+                  label="Foto de perfil"
+                  hint="Quadrada, até 5 MB"
+                  value={profile.avatar_url}
+                  uploading={uploading === "avatar"}
+                  onChange={(event) => uploadMedia(event, "avatar")}
+                />
+                <MediaUpload
+                  label="Banner da página"
+                  hint="Horizontal, até 5 MB"
+                  value={profile.banner_url}
+                  uploading={uploading === "banner"}
+                  onChange={(event) => uploadMedia(event, "banner")}
+                />
+              </div>
               <Field
                 label="Descrição"
                 value={profile.bio}
@@ -523,7 +587,9 @@ function Dashboard({ session }: { session: Session }) {
             <div className="link-editor-list">
               {links.map((l, i) => (
                 <div className="link-editor" key={i}>
-                  <GripVertical className="drag" />
+                  <span className="detected-icon" title="Ícone identificado">
+                    <AutomaticLinkIcon url={l.url} />
+                  </span>
                   <div>
                     <input
                       aria-label="Título do link"
@@ -535,6 +601,9 @@ function Dashboard({ session }: { session: Session }) {
                       aria-label="Endereço do link"
                       value={l.url}
                       onChange={(e) => updateLink(i, "url", e.target.value)}
+                      onBlur={(e) =>
+                        updateLink(i, "url", normalizeUrl(e.target.value))
+                      }
                       placeholder="https://..."
                     />
                     <input
@@ -613,15 +682,108 @@ function Dashboard({ session }: { session: Session }) {
                 {notice}
               </span>
             )}
-            <button className="primary-button" onClick={save} disabled={saving}>
-              <Save size={18} />
-              {saving ? "Salvando…" : "Salvar e publicar"}
-            </button>
+            <div className="save-actions">
+              <a
+                className="open-page-button"
+                href={`${import.meta.env.BASE_URL}${profile.username}`}
+                target="_blank"
+                rel="noreferrer"
+              >
+                <ExternalLink size={17} /> Ver minha página
+              </a>
+              <button
+                className="primary-button"
+                onClick={save}
+                disabled={saving || Boolean(uploading)}
+              >
+                <Save size={18} />
+                {saving ? "Salvando…" : "Salvar e publicar"}
+              </button>
+            </div>
           </div>
         </section>
       </div>
     </main>
   );
+}
+
+function MediaUpload({
+  label,
+  hint,
+  value,
+  uploading,
+  onChange,
+}: {
+  label: string;
+  hint: string;
+  value: string;
+  uploading: boolean;
+  onChange: (event: ChangeEvent<HTMLInputElement>) => void;
+}) {
+  return (
+    <div className="media-upload">
+      <div className="media-preview">
+        {value ? <img src={value} alt="" /> : <ImageIcon />}
+      </div>
+      <div>
+        <strong>{label}</strong>
+        <small>{hint}</small>
+      </div>
+      <label className="upload-button">
+        {uploading ? <Loader2 className="spin" /> : <ImageUp />}
+        {uploading ? "Enviando…" : value ? "Trocar" : "Enviar"}
+        <input
+          type="file"
+          accept="image/*"
+          onChange={onChange}
+          disabled={uploading}
+        />
+      </label>
+    </div>
+  );
+}
+
+function ImageIcon() {
+  return <UserRound aria-hidden="true" />;
+}
+
+const networkIcons: Array<{ domains: string[]; icon: IconType }> = [
+  { domains: ["instagram.com"], icon: FaInstagram },
+  { domains: ["youtube.com", "youtu.be"], icon: FaYoutube },
+  { domains: ["github.com"], icon: FaGithub },
+  { domains: ["linkedin.com"], icon: FaLinkedinIn },
+  { domains: ["facebook.com", "fb.com"], icon: FaFacebookF },
+  { domains: ["tiktok.com"], icon: FaTiktok },
+  { domains: ["whatsapp.com", "wa.me"], icon: FaWhatsapp },
+  { domains: ["twitter.com", "x.com"], icon: FaXTwitter },
+  { domains: ["spotify.com"], icon: FaSpotify },
+  { domains: ["twitch.tv"], icon: FaTwitch },
+  { domains: ["pinterest.com"], icon: FaPinterestP },
+];
+
+function AutomaticLinkIcon({ url }: { url: string }) {
+  let hostname = "";
+  try {
+    hostname = new URL(normalizeUrl(url)).hostname
+      .toLowerCase()
+      .replace(/^www\./, "");
+  } catch {
+    return <Globe2 size={21} />;
+  }
+  const match = networkIcons.find(({ domains }) =>
+    domains.some(
+      (domain) => hostname === domain || hostname.endsWith(`.${domain}`),
+    ),
+  );
+  if (!match) return <Globe2 size={21} />;
+  const Icon = match.icon;
+  return <Icon size={20} aria-hidden="true" />;
+}
+
+function normalizeUrl(url: string) {
+  const clean = url.trim();
+  if (!clean || clean === "https://") return clean;
+  return /^https?:\/\//i.test(clean) ? clean : `https://${clean}`;
 }
 
 function Field({
@@ -881,7 +1043,7 @@ function LandingPage() {
   );
 }
 
-function PublicPage() {
+function PublicPage({ session }: { session: Session | null }) {
   const { username } = useParams();
   const [data, setData] = useState<{
     profile: Profile;
@@ -960,6 +1122,16 @@ function PublicPage() {
             <Link className="create-pill" to="/login">
               Crie a sua
             </Link>
+            {session && (
+              <Link
+                className="icon-button"
+                to="/dashboard"
+                aria-label="Configurar minha página"
+                title="Configurar minha página"
+              >
+                <Settings size={18} />
+              </Link>
+            )}
             <button
               className="icon-button"
               onClick={() =>
@@ -973,6 +1145,11 @@ function PublicPage() {
             </button>
           </div>
         </nav>
+        {p?.banner_url && (
+          <div className="profile-banner">
+            <img src={p.banner_url} alt="Banner do perfil" />
+          </div>
+        )}
         <header className="profile-header">
           <div className="avatar-wrap">
             <img
@@ -1003,7 +1180,7 @@ function PublicPage() {
               key={i}
             >
               <span className="link-icon">
-                <Link2 size={21} />
+                <AutomaticLinkIcon url={l.url} />
               </span>
               <span className="link-copy">
                 <strong>{l.title}</strong>
@@ -1043,8 +1220,11 @@ function AppRoutes() {
   return (
     <Routes>
       <Route path="/" element={<LandingPage />} />
-      <Route path="/camilanogueira" element={<PublicPage />} />
-      <Route path="/u/:username" element={<PublicPage />} />
+      <Route
+        path="/camilanogueira"
+        element={<PublicPage session={session} />}
+      />
+      <Route path="/u/:username" element={<PublicPage session={session} />} />
       <Route
         path="/login"
         element={session ? <Navigate to="/dashboard" /> : <AuthPage />}
@@ -1055,7 +1235,7 @@ function AppRoutes() {
           session ? <Dashboard session={session} /> : <Navigate to="/login" />
         }
       />
-      <Route path="/:username" element={<PublicPage />} />
+      <Route path="/:username" element={<PublicPage session={session} />} />
       <Route path="*" element={<Navigate to="/" />} />
     </Routes>
   );

@@ -8,6 +8,7 @@ create table if not exists public.profiles (
   role text not null default '',
   location text not null default '',
   avatar_url text not null default '',
+  banner_url text not null default '',
   show_bio boolean not null default true,
   show_role boolean not null default true,
   show_location boolean not null default false,
@@ -40,3 +41,45 @@ create policy "Usuário edita os próprios links" on public.links for update usi
 create policy "Usuário exclui os próprios links" on public.links for delete using (auth.uid() = profile_id);
 
 create index if not exists links_profile_position_idx on public.links(profile_id, position);
+
+insert into storage.buckets (id, name, public, file_size_limit, allowed_mime_types)
+values (
+  'profile-media',
+  'profile-media',
+  true,
+  5242880,
+  array['image/jpeg', 'image/png', 'image/webp', 'image/gif']
+)
+on conflict (id) do update set
+  public = excluded.public,
+  file_size_limit = excluded.file_size_limit,
+  allowed_mime_types = excluded.allowed_mime_types;
+
+create policy "Imagens de perfil são públicas"
+on storage.objects for select
+using (bucket_id = 'profile-media');
+
+create policy "Usuário envia suas imagens"
+on storage.objects for insert to authenticated
+with check (
+  bucket_id = 'profile-media'
+  and (storage.foldername(name))[1] = auth.uid()::text
+);
+
+create policy "Usuário atualiza suas imagens"
+on storage.objects for update to authenticated
+using (
+  bucket_id = 'profile-media'
+  and (storage.foldername(name))[1] = auth.uid()::text
+)
+with check (
+  bucket_id = 'profile-media'
+  and (storage.foldername(name))[1] = auth.uid()::text
+);
+
+create policy "Usuário exclui suas imagens"
+on storage.objects for delete to authenticated
+using (
+  bucket_id = 'profile-media'
+  and (storage.foldername(name))[1] = auth.uid()::text
+);

@@ -126,6 +126,9 @@ button {
   display: flex;
   gap: 6px;
 }
+.card-actions .icon-button {
+  text-decoration: none;
+}
 .icon-button {
   display: inline-grid;
   place-items: center;
@@ -150,6 +153,27 @@ a:focus-visible {
 .profile-header {
   text-align: center;
   padding: 18px 18px 24px;
+}
+.profile-banner {
+  height: 168px;
+  margin: 8px 0 0;
+  overflow: hidden;
+  border: 1px solid var(--panel-border);
+  border-radius: 20px;
+  background: var(--surface);
+}
+.profile-banner img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+.profile-banner + .profile-header {
+  position: relative;
+  padding-top: 0;
+}
+.profile-banner + .profile-header .avatar-wrap {
+  margin-top: -44px;
 }
 .avatar-wrap {
   position: relative;
@@ -745,10 +769,20 @@ footer p {
   border-radius: 15px;
   background: #fafbfc;
 }
-.link-editor .drag {
+.link-editor .drag,
+.detected-icon {
   align-self: center;
   width: 17px;
   color: #b0b6bf;
+}
+.detected-icon {
+  display: grid;
+  place-items: center;
+  color: #178c56;
+}
+.detected-icon svg {
+  width: 18px;
+  height: 18px;
 }
 .link-editor > div:nth-child(2) {
   display: grid;
@@ -866,6 +900,94 @@ footer p {
   color: #188458;
   font-size: 0.83rem;
 }
+.save-actions {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+}
+.open-page-button {
+  min-height: 48px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 0 17px;
+  color: #303743;
+  font-size: 0.86rem;
+  font-weight: 750;
+  text-decoration: none;
+  border: 1px solid #dce1e6;
+  border-radius: 13px;
+  background: #fff;
+}
+.media-upload-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+}
+.media-upload {
+  min-width: 0;
+  display: grid;
+  grid-template-columns: 52px minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 11px;
+  padding: 11px;
+  border: 1px solid #e0e4e8;
+  border-radius: 14px;
+  background: #fafbfc;
+}
+.media-preview {
+  width: 52px;
+  height: 52px;
+  display: grid;
+  place-items: center;
+  overflow: hidden;
+  color: #7e8793;
+  border-radius: 12px;
+  background: #e9edf1;
+}
+.media-preview img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+.media-preview svg {
+  width: 21px;
+}
+.media-upload strong,
+.media-upload small {
+  display: block;
+}
+.media-upload strong {
+  color: #373e49;
+  font-size: 0.82rem;
+}
+.media-upload small {
+  margin-top: 3px;
+  color: #8b929e;
+  font-size: 0.69rem;
+}
+.upload-button {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 10px;
+  color: #087b46;
+  font-size: 0.75rem;
+  font-weight: 750;
+  border-radius: 9px;
+  background: #e2f8ed;
+  cursor: pointer;
+}
+.upload-button svg {
+  width: 16px;
+}
+.upload-button input {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  opacity: 0;
+}
 .create-pill {
   align-self: center;
   padding: 8px 12px;
@@ -878,12 +1000,44 @@ footer p {
 }
 .public-light {
   --text: #14171f;
-  --muted: #626b7a;
-  --panel: rgba(255, 255, 255, 0.84);
-  --panel-border: rgba(20, 23, 31, 0.1);
-  --surface: rgba(20, 23, 31, 0.045);
-  --surface-hover: rgba(20, 23, 31, 0.08);
-  background-color: #eef1f5;
+  --muted: #667085;
+  --panel: rgba(255, 255, 255, 0.94);
+  --panel-border: rgba(17, 24, 39, 0.13);
+  --surface: rgba(17, 24, 39, 0.045);
+  --surface-hover: rgba(17, 24, 39, 0.085);
+  --accent-ink: #071d12;
+  --shadow: 0 30px 80px rgba(30, 41, 59, 0.2);
+  color: #14171f;
+  background-color: #e8edf2;
+  background-image:
+    linear-gradient(rgba(17, 24, 39, 0.035) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(17, 24, 39, 0.035) 1px, transparent 1px),
+    radial-gradient(
+      circle at 50% -10%,
+      color-mix(in srgb, var(--accent) 16%, transparent),
+      transparent 42%
+    );
+}
+.public-light .profile-card {
+  color: #14171f;
+}
+.public-light .profile-header h1,
+.public-light .bio,
+.public-light .profile-link,
+.public-light .icon-button {
+  color: #14171f;
+}
+.public-light .brand-mark,
+.public-light .role,
+.public-light .location,
+.public-light footer p {
+  color: #667085;
+}
+.public-light .profile-link {
+  background: rgba(17, 24, 39, 0.045);
+}
+.public-light .profile-link:hover {
+  background: rgba(17, 24, 39, 0.085);
 }
 .not-found {
   align-content: center;
@@ -956,6 +1110,18 @@ footer p {
   }
   .save-bar span {
     display: none;
+  }
+  .save-actions {
+    width: 100%;
+  }
+  .save-actions > * {
+    flex: 1;
+  }
+  .open-page-button {
+    padding-inline: 10px;
+  }
+  .media-upload-grid {
+    grid-template-columns: 1fr;
   }
   .auth-card {
     padding: 24px 20px;
