@@ -1560,18 +1560,28 @@ footer p {
   border-color: transparent;
 }
 .page-shell.preset-ocean {
-  background-image: radial-gradient(
-    circle at 50% 0,
-    rgba(47, 167, 255, 0.22),
-    transparent 42%
-  );
+  background-color: #071019;
+  background-image:
+    linear-gradient(rgba(90, 185, 255, 0.025) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(90, 185, 255, 0.025) 1px, transparent 1px),
+    radial-gradient(circle at 50% 0, rgba(47, 167, 255, 0.24), transparent 52%);
+  background-size:
+    54px 54px,
+    54px 54px,
+    100% 100%;
+  background-repeat: repeat, repeat, no-repeat;
 }
 .page-shell.preset-sunset {
-  background-image: radial-gradient(
-    circle at 50% 0,
-    rgba(255, 86, 139, 0.22),
-    transparent 44%
-  );
+  background-color: #140b11;
+  background-image:
+    linear-gradient(rgba(255, 140, 120, 0.022) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255, 140, 120, 0.022) 1px, transparent 1px),
+    radial-gradient(circle at 50% 0, rgba(255, 86, 139, 0.24), transparent 54%);
+  background-size:
+    54px 54px,
+    54px 54px,
+    100% 100%;
+  background-repeat: repeat, repeat, no-repeat;
 }
 .page-shell.preset-mono {
   --accent: #d7d9dd !important;
@@ -1791,6 +1801,30 @@ footer p {
       color-mix(in srgb, var(--accent) 16%, transparent),
       transparent 42%
     );
+}
+.page-shell.public-light.preset-ocean {
+  background-color: #e8f3fa;
+  background-image:
+    linear-gradient(rgba(20, 92, 140, 0.035) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(20, 92, 140, 0.035) 1px, transparent 1px),
+    radial-gradient(circle at 50% 0, rgba(47, 167, 255, 0.2), transparent 54%);
+  background-size:
+    54px 54px,
+    54px 54px,
+    100% 100%;
+  background-repeat: repeat, repeat, no-repeat;
+}
+.page-shell.public-light.preset-sunset {
+  background-color: #fff0f2;
+  background-image:
+    linear-gradient(rgba(130, 45, 65, 0.028) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(130, 45, 65, 0.028) 1px, transparent 1px),
+    radial-gradient(circle at 50% 0, rgba(255, 86, 139, 0.18), transparent 56%);
+  background-size:
+    54px 54px,
+    54px 54px,
+    100% 100%;
+  background-repeat: repeat, repeat, no-repeat;
 }
 .public-light .profile-card {
   color: #14171f;
