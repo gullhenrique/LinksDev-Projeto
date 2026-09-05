@@ -17,6 +17,7 @@ import {
   CalendarClock,
   Check,
   Copy,
+  Download,
   Eye,
   EyeOff,
   ExternalLink,
@@ -601,7 +602,11 @@ function Dashboard({ session }: { session: Session }) {
   const [notice, setNotice] = useState("");
   const [dirty, setDirty] = useState(false);
   const [analytics, setAnalytics] = useState<{
-    views: { viewed_at: string }[];
+    views: {
+      viewed_at: string;
+      source: string | null;
+      device_type: string | null;
+    }[];
     clicks: {
       clicked_at: string;
       link_title: string | null;
@@ -722,7 +727,7 @@ function Dashboard({ session }: { session: Session }) {
       const [{ data: views }, { data: clicks }] = await Promise.all([
         supabase
           .from("page_views")
-          .select("viewed_at")
+          .select("viewed_at, source, device_type")
           .eq("profile_id", session.user.id)
           .gte("viewed_at", since)
           .order("viewed_at"),
@@ -1888,7 +1893,11 @@ function AnalyticsPanel({
   analytics,
 }: {
   analytics: {
-    views: { viewed_at: string }[];
+    views: {
+      viewed_at: string;
+      source: string | null;
+      device_type: string | null;
+    }[];
     clicks: {
       clicked_at: string;
       link_title: string | null;
@@ -1935,6 +1944,51 @@ function AnalyticsPanel({
       return result;
     }, {}),
   ).sort((a, b) => b.count - a.count);
+  const summarize = (field: "source" | "device_type") =>
+    Object.entries(
+      views.reduce<Record<string, number>>((result, view) => {
+        const key =
+          view[field] || (field === "source" ? "Direto" : "Não identificado");
+        result[key] = (result[key] || 0) + 1;
+        return result;
+      }, {}),
+    ).sort((a, b) => b[1] - a[1]);
+  const sources = summarize("source");
+  const devices = summarize("device_type");
+  function exportCsv() {
+    const rows = [
+      ["tipo", "data", "origem", "dispositivo", "link", "url"],
+      ...views.map((view) => [
+        "visualizacao",
+        view.viewed_at,
+        view.source || "Direto",
+        view.device_type || "Não identificado",
+        "",
+        "",
+      ]),
+      ...clicks.map((click) => [
+        "clique",
+        click.clicked_at,
+        "",
+        "",
+        click.link_title || "Histórico anterior",
+        click.link_url || "",
+      ]),
+    ];
+    const csv = rows
+      .map((row) =>
+        row.map((value) => `"${String(value).replace(/"/g, '""')}"`).join(","),
+      )
+      .join("\n");
+    const url = URL.createObjectURL(
+      new Blob(["\ufeff", csv], { type: "text/csv;charset=utf-8" }),
+    );
+    const anchor = document.createElement("a");
+    anchor.href = url;
+    anchor.download = `linksdev-estatisticas-${period}-dias.csv`;
+    anchor.click();
+    URL.revokeObjectURL(url);
+  }
   return (
     <div className="analytics-panel">
       <div className="analytics-toolbar">
@@ -2008,6 +2062,46 @@ function AnalyticsPanel({
           ))}
         </div>
       </div>
+      <div className="analytics-breakdowns">
+        <div className="breakdown-card">
+          <header>
+            <strong>Origem dos acessos</strong>
+            <span>Como chegaram</span>
+          </header>
+          {sources.length ? (
+            sources.slice(0, 5).map(([label, count]) => (
+              <div key={label}>
+                <span>{label}</span>
+                <i>
+                  <b style={{ width: `${(count / views.length) * 100}%` }} />
+                </i>
+                <em>{count}</em>
+              </div>
+            ))
+          ) : (
+            <p>Sem dados no período.</p>
+          )}
+        </div>
+        <div className="breakdown-card">
+          <header>
+            <strong>Dispositivos</strong>
+            <span>Onde acessaram</span>
+          </header>
+          {devices.length ? (
+            devices.slice(0, 5).map(([label, count]) => (
+              <div key={label}>
+                <span>{label}</span>
+                <i>
+                  <b style={{ width: `${(count / views.length) * 100}%` }} />
+                </i>
+                <em>{count}</em>
+              </div>
+            ))
+          ) : (
+            <p>Sem dados no período.</p>
+          )}
+        </div>
+      </div>
       <div className="link-ranking">
         <header>
           <strong>Links com melhor desempenho</strong>
@@ -2030,6 +2124,9 @@ function AnalyticsPanel({
           <p>Ainda não há cliques neste período.</p>
         )}
       </div>
+      <button className="export-stats-button" type="button" onClick={exportCsv}>
+        <Download size={17} /> Exportar dados em CSV
+      </button>
     </div>
   );
 }
@@ -2288,6 +2385,30 @@ function isSafePublicUrl(url: string) {
   } catch {
     return false;
   }
+}
+
+function trafficSource(referrer: string) {
+  if (!referrer) return "Direto";
+  try {
+    const host = new URL(referrer).hostname.toLowerCase();
+    if (host.includes("instagram")) return "Instagram";
+    if (host.includes("facebook") || host.includes("fb.com")) return "Facebook";
+    if (host.includes("google")) return "Google";
+    if (host.includes("youtube") || host.includes("youtu.be")) return "YouTube";
+    if (host.includes("tiktok")) return "TikTok";
+    if (host.includes("whatsapp") || host.includes("wa.me")) return "WhatsApp";
+    return host.replace(/^www\./, "");
+  } catch {
+    return "Direto";
+  }
+}
+
+function visitorDevice() {
+  const agent = navigator.userAgent.toLowerCase();
+  if (/ipad|tablet/.test(agent)) return "Tablet";
+  if (/mobi|android|iphone/.test(agent) || window.innerWidth < 700)
+    return "Celular";
+  return "Computador";
 }
 
 function Field({
@@ -2596,7 +2717,11 @@ function PublicPage({ session }: { session: Session | null }) {
         const viewKey = `linksdev-view-${p.id}`;
         if (!sessionStorage.getItem(viewKey)) {
           sessionStorage.setItem(viewKey, "1");
-          void supabase.from("page_views").insert({ profile_id: p.id });
+          void supabase.from("page_views").insert({
+            profile_id: p.id,
+            source: trafficSource(document.referrer),
+            device_type: visitorDevice(),
+          });
         }
       }
       setLoading(false);

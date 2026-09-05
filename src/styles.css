@@ -1475,6 +1475,78 @@ footer p {
   font-style: normal;
   font-weight: 750;
 }
+.analytics-breakdowns {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+}
+.breakdown-card {
+  display: grid;
+  gap: 10px;
+  padding: 16px;
+  border: 1px solid #e3e7ea;
+  border-radius: 15px;
+  background: #fafbfc;
+}
+.breakdown-card header {
+  display: grid;
+  gap: 2px;
+}
+.breakdown-card header strong {
+  color: #2b313b;
+  font-size: 0.8rem;
+}
+.breakdown-card header span,
+.breakdown-card > p {
+  margin: 0;
+  color: #87909c;
+  font-size: 0.66rem;
+}
+.breakdown-card > div {
+  display: grid;
+  grid-template-columns: 82px 1fr 24px;
+  align-items: center;
+  gap: 8px;
+}
+.breakdown-card > div > span {
+  overflow: hidden;
+  color: #5f6875;
+  font-size: 0.68rem;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.breakdown-card > div > i {
+  height: 6px;
+  overflow: hidden;
+  border-radius: 99px;
+  background: #e4e8eb;
+}
+.breakdown-card > div > i > b {
+  display: block;
+  height: 100%;
+  border-radius: inherit;
+  background: linear-gradient(90deg, #56e898, #4e7cff);
+}
+.breakdown-card > div > em {
+  color: #58616e;
+  font-size: 0.68rem;
+  font-style: normal;
+  font-weight: 800;
+  text-align: right;
+}
+.export-stats-button {
+  min-height: 43px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  color: #087b46;
+  font-weight: 750;
+  border: 1px solid #ccebdc;
+  border-radius: 11px;
+  background: #ebfaf3;
+  cursor: pointer;
+}
 .unsaved-badge {
   min-height: 38px;
   display: inline-flex;
@@ -2169,6 +2241,25 @@ footer p {
 .dashboard-dark .analytics-chart {
   border-color: rgba(255, 255, 255, 0.1);
 }
+.dashboard-dark .breakdown-card {
+  border-color: rgba(255, 255, 255, 0.09);
+  background: #191d24;
+}
+.dashboard-dark .breakdown-card header strong {
+  color: #e8ebef;
+}
+.dashboard-dark .breakdown-card > div > span,
+.dashboard-dark .breakdown-card > div > em {
+  color: #a5adb8;
+}
+.dashboard-dark .breakdown-card > div > i {
+  background: #2a3039;
+}
+.dashboard-dark .export-stats-button {
+  color: #7defae;
+  border-color: rgba(85, 224, 146, 0.25);
+  background: rgba(55, 202, 120, 0.1);
+}
 .dashboard-dark .live-preview-heading {
   color: #cbd1d8;
 }
@@ -2374,6 +2465,9 @@ footer p {
     grid-template-columns: 1fr;
   }
   .advanced-appearance {
+    grid-template-columns: 1fr;
+  }
+  .analytics-breakdowns {
     grid-template-columns: 1fr;
   }
   .analytics-toolbar {
