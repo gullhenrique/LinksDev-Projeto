@@ -183,6 +183,8 @@ function AuthPage() {
   const [awaitingCode, setAwaitingCode] = useState(false);
   const [message, setMessage] = useState("");
   const [loading, setLoading] = useState(false);
+  const [recoveryMode, setRecoveryMode] = useState(false);
+  const [recoverySent, setRecoverySent] = useState(false);
   const passwordMismatch =
     mode === "signup" &&
     confirmPassword.length > 0 &&
@@ -235,6 +237,172 @@ function AuthPage() {
     setLoading(false);
     setMessage(error ? error.message : "Um novo código foi enviado.");
   }
+  async function requestRecovery(e?: FormEvent) {
+    e?.preventDefault();
+    setLoading(true);
+    setMessage("");
+    const { error } = await supabase.auth.resetPasswordForEmail(email);
+    setLoading(false);
+    if (error) setMessage(error.message);
+    else setRecoverySent(true);
+  }
+  async function completeRecovery(e: FormEvent) {
+    e.preventDefault();
+    if (password !== confirmPassword) {
+      setMessage("As senhas não coincidem. Confira e tente novamente.");
+      return;
+    }
+    setLoading(true);
+    setMessage("");
+    const { error: codeError } = await supabase.auth.verifyOtp({
+      email,
+      token: confirmationCode,
+      type: "recovery",
+    });
+    if (codeError) {
+      setMessage("Código inválido ou expirado. Solicite um novo código.");
+      setLoading(false);
+      return;
+    }
+    const { error } = await supabase.auth.updateUser({ password });
+    setLoading(false);
+    if (error) setMessage(error.message);
+    else navigate("/dashboard");
+  }
+  if (recoveryMode)
+    return (
+      <main className="auth-page">
+        <div className="auth-orb" />
+        <section className="auth-card code-card">
+          <Brand />
+          <div className="auth-heading">
+            <span className="kicker">Recuperar acesso</span>
+            <h1>
+              {recoverySent
+                ? "Crie uma nova senha."
+                : "Vamos recuperar sua conta."}
+            </h1>
+            <p>
+              {recoverySent ? (
+                <>
+                  Digite o código de 8 dígitos enviado para{" "}
+                  <strong>{email}</strong>.
+                </>
+              ) : (
+                "Informe o e-mail utilizado no cadastro."
+              )}
+            </p>
+          </div>
+          {!recoverySent ? (
+            <form onSubmit={requestRecovery}>
+              <label>
+                E-mail
+                <input
+                  type="email"
+                  value={email}
+                  onChange={(event) => setEmail(event.target.value)}
+                  placeholder="voce@email.com"
+                  required
+                  autoFocus
+                />
+              </label>
+              {message && <p className="form-message">{message}</p>}
+              <button className="primary-button" disabled={loading}>
+                {loading ? (
+                  <Loader2 className="spin" size={18} />
+                ) : (
+                  "Enviar código"
+                )}
+              </button>
+            </form>
+          ) : (
+            <form onSubmit={completeRecovery}>
+              <label>
+                Código de recuperação
+                <input
+                  className="code-input"
+                  inputMode="numeric"
+                  autoComplete="one-time-code"
+                  value={confirmationCode}
+                  onChange={(event) =>
+                    setConfirmationCode(
+                      event.target.value.replace(/\D/g, "").slice(0, 8),
+                    )
+                  }
+                  placeholder="00000000"
+                  pattern="[0-9]{8}"
+                  maxLength={8}
+                  required
+                  autoFocus
+                />
+              </label>
+              <label>
+                Nova senha
+                <input
+                  type="password"
+                  value={password}
+                  onChange={(event) => setPassword(event.target.value)}
+                  minLength={8}
+                  placeholder="Mínimo de 8 caracteres"
+                  required
+                />
+              </label>
+              <label>
+                Confirmar nova senha
+                <input
+                  className={
+                    confirmPassword && password !== confirmPassword
+                      ? "input-error"
+                      : undefined
+                  }
+                  type="password"
+                  value={confirmPassword}
+                  onChange={(event) => setConfirmPassword(event.target.value)}
+                  minLength={8}
+                  placeholder="Digite novamente"
+                  required
+                />
+              </label>
+              {message && <p className="form-message">{message}</p>}
+              <button
+                className="primary-button"
+                disabled={
+                  loading ||
+                  confirmationCode.length !== 8 ||
+                  !confirmPassword ||
+                  password !== confirmPassword
+                }
+              >
+                {loading ? (
+                  <Loader2 className="spin" size={18} />
+                ) : (
+                  "Redefinir senha"
+                )}
+              </button>
+              <button
+                className="text-button"
+                type="button"
+                onClick={requestRecovery}
+                disabled={loading}
+              >
+                Enviar outro código
+              </button>
+            </form>
+          )}
+          <button
+            className="back-link button-link"
+            onClick={() => {
+              setRecoveryMode(false);
+              setRecoverySent(false);
+              setMessage("");
+              setConfirmationCode("");
+            }}
+          >
+            <ArrowLeft size={15} /> Voltar para entrar
+          </button>
+        </section>
+      </main>
+    );
   if (awaitingCode)
     return (
       <main className="auth-page">
@@ -381,6 +549,18 @@ function AuthPage() {
             )}
           </button>
         </form>
+        {mode === "login" && (
+          <button
+            className="forgot-password"
+            onClick={() => {
+              setRecoveryMode(true);
+              setMessage("");
+              setPassword("");
+            }}
+          >
+            Esqueci minha senha
+          </button>
+        )}
         <button
           className="text-button"
           onClick={() => {
