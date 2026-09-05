@@ -801,6 +801,57 @@ footer p {
   cursor: not-allowed;
   opacity: 0.48;
 }
+.share-settings > .field {
+  grid-column: 1 / -1;
+}
+.share-preview-card {
+  display: grid;
+  gap: 6px;
+  margin-top: 18px;
+  padding: 18px;
+  overflow: hidden;
+  border: 1px solid #e1e6ea;
+  border-radius: 14px;
+  background: #f8fafb;
+}
+.share-preview-card > span {
+  color: #0a9655;
+  font-size: 0.68rem;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+.share-preview-card > strong {
+  color: #262d37;
+  font: 800 1rem "Manrope";
+}
+.share-preview-card p {
+  margin: 0;
+  color: #66707d;
+  font-size: 0.78rem;
+  line-height: 1.45;
+}
+.share-preview-card small {
+  overflow: hidden;
+  color: #8a929d;
+  font-size: 0.68rem;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.copy-address-button {
+  min-height: 42px;
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  margin-top: 12px;
+  padding: 0 14px;
+  color: #087b46;
+  font-weight: 750;
+  border: 1px solid #ccebdc;
+  border-radius: 11px;
+  background: #ebfaf3;
+  cursor: pointer;
+}
 .prefixed {
   display: flex;
   align-items: center;
@@ -1915,6 +1966,21 @@ footer p {
 }
 .dashboard-dark .field-message.error {
   color: #ff9994;
+}
+.dashboard-dark .share-preview-card {
+  border-color: rgba(255, 255, 255, 0.1);
+  background: #191d24;
+}
+.dashboard-dark .share-preview-card > strong {
+  color: #f2f4f6;
+}
+.dashboard-dark .share-preview-card p {
+  color: #a1a9b5;
+}
+.dashboard-dark .copy-address-button {
+  color: #7defae;
+  border-color: rgba(85, 224, 146, 0.25);
+  background: rgba(55, 202, 120, 0.1);
 }
 .dashboard-dark .field input,
 .dashboard-dark .link-editor input,

@@ -104,6 +104,8 @@ type Profile = {
   background_style: "theme" | "solid" | "gradient";
   font_family: "modern" | "classic" | "rounded" | "system";
   button_radius: number;
+  seo_title: string;
+  seo_description: string;
   theme_preset: "mint" | "ocean" | "sunset" | "mono";
   theme: "system" | "dark" | "light";
 };
@@ -144,6 +146,8 @@ const emptyProfile: Profile = {
   background_style: "theme",
   font_family: "modern",
   button_radius: 18,
+  seo_title: "",
+  seo_description: "",
   theme_preset: "mint",
   theme: "system",
 };
@@ -958,6 +962,11 @@ function Dashboard({ session }: { session: Session }) {
     });
     setQrCode(image);
   }
+  async function copyPageAddress() {
+    const url = `${window.location.origin}${import.meta.env.BASE_URL}${profile.username}`;
+    await navigator.clipboard.writeText(url);
+    setNotice("Endereço da página copiado!");
+  }
   async function changePassword() {
     setPasswordNotice("");
     if (newPassword.length < 8) {
@@ -1015,6 +1024,14 @@ function Dashboard({ session }: { session: Session }) {
           >
             <QrCode size={18} />
           </button>
+          <button
+            className="icon-button"
+            onClick={copyPageAddress}
+            title="Copiar endereço da página"
+            aria-label="Copiar endereço da página"
+          >
+            <Copy size={18} />
+          </button>
           <a
             className="preview-button"
             href={`${import.meta.env.BASE_URL}${profile.username}`}
@@ -1056,6 +1073,9 @@ function Dashboard({ session }: { session: Session }) {
             </a>
             <a href="#estatisticas">
               <BarChart3 /> Estatísticas
+            </a>
+            <a href="#compartilhamento">
+              <Share2 /> Compartilhamento
             </a>
             <a href="#conta">
               <KeyRound /> Conta e segurança
@@ -1344,6 +1364,55 @@ function Dashboard({ session }: { session: Session }) {
                 </label>
               )}
             </div>
+          </EditorSection>
+          <EditorSection
+            id="compartilhamento"
+            icon={<Share2 />}
+            title="Compartilhamento"
+            description="Defina como sua página aparece no navegador e ao ser compartilhada."
+          >
+            <div className="form-grid share-settings">
+              <Field
+                label="Título da página"
+                value={profile.seo_title || ""}
+                onChange={(value) => update("seo_title", value.slice(0, 60))}
+                placeholder={profile.display_name || "Seu nome — LinksDev"}
+                message={`${(profile.seo_title || "").length}/60 caracteres`}
+              />
+              <Field
+                label="Descrição para busca e compartilhamento"
+                value={profile.seo_description || ""}
+                onChange={(value) =>
+                  update("seo_description", value.slice(0, 160))
+                }
+                placeholder={profile.bio || "Conheça todos os meus links."}
+                message={`${(profile.seo_description || "").length}/160 caracteres`}
+              />
+            </div>
+            <div className="share-preview-card">
+              <span>Prévia</span>
+              <strong>
+                {profile.seo_title ||
+                  `${profile.display_name || "Sua página"} — LinksDev`}
+              </strong>
+              <p>
+                {profile.seo_description ||
+                  profile.bio ||
+                  "Conheça todos os meus links em um só lugar."}
+              </p>
+              <small>
+                {window.location.host}
+                {import.meta.env.BASE_URL}
+                {profile.username}
+              </small>
+            </div>
+            <button
+              className="copy-address-button"
+              type="button"
+              onClick={copyPageAddress}
+            >
+              <Copy size={17} /> Copiar endereço da página
+            </button>
           </EditorSection>
           <EditorSection
             id="estatisticas"
@@ -2491,6 +2560,57 @@ function PublicPage({ session }: { session: Session | null }) {
       setLoading(false);
     })();
   }, [username]);
+  useEffect(() => {
+    const profile = data?.profile;
+    if (!profile) return;
+    const previousTitle = document.title;
+    const title =
+      profile.seo_title ||
+      `${profile.display_name || profile.username} — LinksDev`;
+    const description =
+      profile.seo_description ||
+      profile.bio ||
+      "Conheça todos os links desta página.";
+    document.title = title;
+    const setMeta = (
+      selector: string,
+      attribute: "name" | "property",
+      key: string,
+      content: string,
+    ) => {
+      let element = document.head.querySelector<HTMLMetaElement>(selector);
+      if (!element) {
+        element = document.createElement("meta");
+        element.setAttribute(attribute, key);
+        document.head.appendChild(element);
+      }
+      element.content = content;
+    };
+    setMeta('meta[name="description"]', "name", "description", description);
+    setMeta('meta[property="og:title"]', "property", "og:title", title);
+    setMeta(
+      'meta[property="og:description"]',
+      "property",
+      "og:description",
+      description,
+    );
+    setMeta(
+      'meta[property="og:url"]',
+      "property",
+      "og:url",
+      window.location.href,
+    );
+    if (profile.banner_url || profile.avatar_url)
+      setMeta(
+        'meta[property="og:image"]',
+        "property",
+        "og:image",
+        profile.banner_url || profile.avatar_url,
+      );
+    return () => {
+      document.title = previousTitle;
+    };
+  }, [data]);
   if (loading)
     return (
       <main className="loading-page">

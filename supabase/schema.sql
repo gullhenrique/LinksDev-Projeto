@@ -19,6 +19,8 @@ create table if not exists public.profiles (
   background_style text not null default 'theme',
   font_family text not null default 'modern',
   button_radius integer not null default 18,
+  seo_title text not null default '',
+  seo_description text not null default '',
   theme_preset text not null default 'mint',
   theme text not null default 'system' check (theme in ('system', 'dark', 'light')),
   updated_at timestamptz not null default now()
