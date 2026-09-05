@@ -20,6 +20,8 @@ import {
   Eye,
   EyeOff,
   ExternalLink,
+  FileText,
+  Flag,
   Globe2,
   GripVertical,
   ImageUp,
@@ -900,6 +902,19 @@ function Dashboard({ session }: { session: Session }) {
       usernameStatus === "checking"
     ) {
       setNotice("Escolha um nome de usuário disponível antes de publicar.");
+      return;
+    }
+    const unsafeLink = links.find(
+      (link) =>
+        (link.link_type || "url") === "url" &&
+        link.title &&
+        link.url &&
+        !isSafePublicUrl(link.url),
+    );
+    if (unsafeLink) {
+      setNotice(
+        `Revise o endereço de “${unsafeLink.title}”. Use um site público com http ou https.`,
+      );
       return;
     }
     setSaving(true);
@@ -2256,6 +2271,25 @@ function normalizeUrl(url: string) {
   return /^https?:\/\//i.test(clean) ? clean : `https://${clean}`;
 }
 
+function isSafePublicUrl(url: string) {
+  try {
+    const parsed = new URL(normalizeUrl(url));
+    const hostname = parsed.hostname.toLowerCase();
+    if (!["http:", "https:"].includes(parsed.protocol)) return false;
+    if (
+      hostname === "localhost" ||
+      hostname === "0.0.0.0" ||
+      hostname === "127.0.0.1"
+    )
+      return false;
+    if (/^(10\.|192\.168\.|172\.(1[6-9]|2\d|3[01])\.)/.test(hostname))
+      return false;
+    return Boolean(hostname.includes(".") || hostname === "localhost");
+  } catch {
+    return false;
+  }
+}
+
 function Field({
   label,
   value,
@@ -2518,6 +2552,10 @@ function LandingPage() {
       <footer className="landing-footer">
         <Brand />
         <p>Uma nova forma de compartilhar sua presença digital.</p>
+        <div className="landing-legal-links">
+          <Link to="/termos">Termos de Uso</Link>
+          <Link to="/privacidade">Privacidade</Link>
+        </div>
         <span>© 2026 LinksDev · nome provisório</span>
       </footer>
     </main>
@@ -2531,6 +2569,10 @@ function PublicPage({ session }: { session: Session | null }) {
     links: UserLink[];
   } | null>(null);
   const [loading, setLoading] = useState(Boolean(username));
+  const [reportOpen, setReportOpen] = useState(false);
+  const [reportReason, setReportReason] = useState("conteudo_inadequado");
+  const [reportDetails, setReportDetails] = useState("");
+  const [reportStatus, setReportStatus] = useState("");
   const systemTheme = useSystemTheme();
   useEffect(() => {
     if (!username || username === "camilanogueira") {
@@ -2672,6 +2714,23 @@ function PublicPage({ session }: { session: Session | null }) {
     if (link.link_type === "pix") {
       await navigator.clipboard.writeText(link.action_value || "");
       window.alert("Chave Pix copiada!");
+    }
+  }
+  async function submitReport(event: FormEvent) {
+    event.preventDefault();
+    if (!p) return;
+    setReportStatus("Enviando…");
+    const { error } = await supabase.from("page_reports").insert({
+      profile_id: p.id,
+      reporter_id: session?.user.id || null,
+      reported_username: p.username,
+      reason: reportReason,
+      details: reportDetails.slice(0, 500),
+    });
+    if (error) setReportStatus("Não foi possível enviar. Tente novamente.");
+    else {
+      setReportStatus("Denúncia enviada para análise.");
+      setReportDetails("");
     }
   }
   return (
@@ -2816,8 +2875,158 @@ function PublicPage({ session }: { session: Session | null }) {
           <p>
             Feito com <strong>LinksDev</strong>
           </p>
+          {p && (
+            <button
+              className="report-page-button"
+              onClick={() => setReportOpen(true)}
+            >
+              <Flag size={13} /> Denunciar esta página
+            </button>
+          )}
         </footer>
       </section>
+      {reportOpen && (
+        <div
+          className="report-backdrop"
+          role="presentation"
+          onMouseDown={() => setReportOpen(false)}
+        >
+          <section
+            className="report-modal"
+            role="dialog"
+            aria-modal="true"
+            onMouseDown={(event) => event.stopPropagation()}
+          >
+            <button
+              className="report-close"
+              onClick={() => setReportOpen(false)}
+              aria-label="Fechar"
+            >
+              ×
+            </button>
+            <span className="kicker">Segurança</span>
+            <h2>Denunciar página</h2>
+            <p>
+              Use este formulário apenas para conteúdo inadequado, fraude ou
+              links perigosos.
+            </p>
+            <form onSubmit={submitReport}>
+              <label>
+                Motivo
+                <select
+                  value={reportReason}
+                  onChange={(event) => setReportReason(event.target.value)}
+                >
+                  <option value="conteudo_inadequado">
+                    Conteúdo inadequado
+                  </option>
+                  <option value="fraude">Fraude ou tentativa de golpe</option>
+                  <option value="link_perigoso">Link perigoso</option>
+                  <option value="identidade">Uso indevido de identidade</option>
+                  <option value="outro">Outro motivo</option>
+                </select>
+              </label>
+              <label>
+                Detalhes
+                <textarea
+                  value={reportDetails}
+                  onChange={(event) => setReportDetails(event.target.value)}
+                  maxLength={500}
+                  placeholder="Explique brevemente o problema"
+                />
+              </label>
+              {reportStatus && (
+                <span className="report-status">{reportStatus}</span>
+              )}
+              <button
+                className="primary-button"
+                disabled={reportStatus === "Enviando…"}
+              >
+                Enviar denúncia
+              </button>
+            </form>
+          </section>
+        </div>
+      )}
+    </main>
+  );
+}
+
+function LegalPage({ type }: { type: "terms" | "privacy" }) {
+  const terms = type === "terms";
+  return (
+    <main className="legal-page">
+      <nav>
+        <Brand />
+        <Link to="/">
+          <ArrowLeft size={15} /> Voltar
+        </Link>
+      </nav>
+      <article>
+        <span className="kicker">
+          <FileText size={15} /> Documento provisório
+        </span>
+        <h1>{terms ? "Termos de Uso" : "Política de Privacidade"}</h1>
+        <p className="legal-updated">
+          Última atualização: 5 de setembro de 2026.
+        </p>
+        {terms ? (
+          <>
+            <h2>1. Uso da plataforma</h2>
+            <p>
+              O LinksDev permite criar páginas públicas para reunir links e
+              informações. O usuário é responsável pelo conteúdo que publica e
+              deve possuir autorização para utilizá-lo.
+            </p>
+            <h2>2. Conteúdo proibido</h2>
+            <p>
+              Não é permitido publicar fraude, malware, conteúdo ilegal,
+              violação de direitos, falsidade de identidade ou materiais que
+              coloquem terceiros em risco.
+            </p>
+            <h2>3. Disponibilidade</h2>
+            <p>
+              A plataforma está em desenvolvimento e pode receber alterações,
+              manutenções ou limitações. Recursos pagos ainda não estão ativos.
+            </p>
+            <h2>4. Suspensão</h2>
+            <p>
+              Páginas denunciadas podem ser analisadas e, quando necessário,
+              suspensas para proteger usuários e visitantes.
+            </p>
+          </>
+        ) : (
+          <>
+            <h2>1. Dados armazenados</h2>
+            <p>
+              Armazenamos informações de conta, conteúdo do perfil, links,
+              arquivos enviados e dados básicos de uso necessários para operar
+              as estatísticas.
+            </p>
+            <h2>2. Finalidade</h2>
+            <p>
+              Os dados são utilizados para autenticação, publicação das páginas,
+              personalização, segurança e apresentação de métricas ao
+              proprietário.
+            </p>
+            <h2>3. Compartilhamento</h2>
+            <p>
+              Não vendemos dados pessoais. Serviços de infraestrutura processam
+              dados apenas para viabilizar a plataforma.
+            </p>
+            <h2>4. Controle do usuário</h2>
+            <p>
+              O usuário pode editar suas informações e solicitar exclusão da
+              conta. Uma ferramenta automatizada será adicionada antes do
+              lançamento comercial.
+            </p>
+          </>
+        )}
+        <p className="legal-note">
+          Este documento é provisório e deverá passar por revisão jurídica antes
+          do lançamento comercial.
+        </p>
+      </article>
     </main>
   );
 }
@@ -2851,6 +3060,8 @@ function AppRoutes() {
         path="/login"
         element={session ? <Navigate to="/dashboard" /> : <AuthPage />}
       />
+      <Route path="/termos" element={<LegalPage type="terms" />} />
+      <Route path="/privacidade" element={<LegalPage type="privacy" />} />
       <Route
         path="/dashboard"
         element={

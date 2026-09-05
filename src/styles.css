@@ -384,6 +384,100 @@ footer p {
   color: var(--muted);
   font-size: 0.76rem;
 }
+.report-page-button {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  margin-top: 10px;
+  padding: 4px;
+  color: var(--muted);
+  font-size: 0.66rem;
+  border: 0;
+  background: transparent;
+  cursor: pointer;
+  opacity: 0.75;
+}
+.report-page-button:hover {
+  opacity: 1;
+  text-decoration: underline;
+}
+.report-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 80;
+  display: grid;
+  place-items: center;
+  padding: 18px;
+  background: rgba(4, 7, 11, 0.78);
+  backdrop-filter: blur(10px);
+}
+.report-modal {
+  position: relative;
+  width: min(100%, 470px);
+  padding: 26px;
+  color: #f3f5f7;
+  text-align: left;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 22px;
+  background: #13171d;
+  box-shadow: 0 30px 90px rgba(0, 0, 0, 0.55);
+}
+.report-close {
+  position: absolute;
+  top: 13px;
+  right: 13px;
+  width: 36px;
+  height: 36px;
+  color: #aeb6c1;
+  font-size: 1.3rem;
+  border: 0;
+  border-radius: 10px;
+  background: rgba(255, 255, 255, 0.06);
+  cursor: pointer;
+}
+.report-modal h2 {
+  margin: 8px 0 5px;
+  font: 800 1.35rem "Manrope";
+}
+.report-modal > p {
+  margin: 0;
+  color: #9ca5b2;
+  font-size: 0.8rem;
+  line-height: 1.5;
+}
+.report-modal form {
+  display: grid;
+  gap: 13px;
+  margin-top: 20px;
+}
+.report-modal label {
+  display: grid;
+  gap: 7px;
+  color: #cbd1d8;
+  font-size: 0.76rem;
+  font-weight: 700;
+}
+.report-modal select,
+.report-modal textarea {
+  width: 100%;
+  color: #eef1f4;
+  border: 1px solid rgba(255, 255, 255, 0.11);
+  border-radius: 11px;
+  background: #1c2129;
+}
+.report-modal select {
+  height: 44px;
+  padding: 0 11px;
+}
+.report-modal textarea {
+  min-height: 105px;
+  padding: 11px;
+  resize: vertical;
+}
+.report-status {
+  color: #80efb0;
+  font-size: 0.75rem;
+}
 @media (max-width: 520px) {
   .page-shell {
     align-items: start;
@@ -2875,6 +2969,89 @@ footer p {
 .landing-footer p {
   grid-row: 2;
   color: #777f8b;
+}
+.landing-legal-links {
+  display: flex;
+  justify-content: center;
+  gap: 18px;
+  margin-top: 13px;
+}
+.landing-legal-links a {
+  color: #7e8793;
+  font-size: 0.74rem;
+  text-decoration: none;
+}
+.landing-legal-links a:hover {
+  color: #7bf0ae;
+}
+.legal-page {
+  min-height: 100vh;
+  padding: 24px;
+  color: #eef1f4;
+  background: #090b0f;
+}
+.legal-page > nav {
+  width: min(100%, 900px);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin: 0 auto;
+}
+.legal-page > nav > a:last-child {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  color: #aab2bd;
+  font-size: 0.8rem;
+  text-decoration: none;
+}
+.legal-page article {
+  width: min(100%, 760px);
+  margin: 75px auto;
+  padding: 38px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 24px;
+  background: #12151b;
+}
+.legal-page article .kicker {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+}
+.legal-page h1 {
+  margin-top: 15px;
+  font-size: clamp(2rem, 6vw, 3.4rem);
+}
+.legal-updated {
+  color: #7f8895;
+  font-size: 0.76rem;
+}
+.legal-page h2 {
+  margin: 30px 0 7px;
+  font: 800 1rem "Manrope";
+}
+.legal-page article > p:not(.legal-updated):not(.legal-note) {
+  color: #aab2bd;
+  line-height: 1.7;
+}
+.legal-note {
+  margin-top: 35px;
+  padding: 14px;
+  color: #edc879;
+  font-size: 0.75rem;
+  line-height: 1.5;
+  border: 1px solid rgba(237, 200, 121, 0.2);
+  border-radius: 11px;
+  background: rgba(237, 200, 121, 0.06);
+}
+@media (max-width: 620px) {
+  .legal-page {
+    padding: 18px 12px;
+  }
+  .legal-page article {
+    margin: 42px auto;
+    padding: 24px 18px;
+  }
 }
 .landing-footer > span {
   grid-column: 2;
