@@ -14,6 +14,11 @@ create table if not exists public.profiles (
   show_role boolean not null default true,
   show_location boolean not null default false,
   accent_color text not null default '#6ef5a8',
+  background_color text not null default '#0b0d11',
+  background_secondary text not null default '#17231d',
+  background_style text not null default 'theme',
+  font_family text not null default 'modern',
+  button_radius integer not null default 18,
   theme_preset text not null default 'mint',
   theme text not null default 'system' check (theme in ('system', 'dark', 'light')),
   updated_at timestamptz not null default now()

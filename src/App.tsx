@@ -96,6 +96,11 @@ type Profile = {
   show_role: boolean;
   show_location: boolean;
   accent_color: string;
+  background_color: string;
+  background_secondary: string;
+  background_style: "theme" | "solid" | "gradient";
+  font_family: "modern" | "classic" | "rounded" | "system";
+  button_radius: number;
   theme_preset: "mint" | "ocean" | "sunset" | "mono";
   theme: "system" | "dark" | "light";
 };
@@ -127,6 +132,11 @@ const emptyProfile: Profile = {
   show_role: true,
   show_location: false,
   accent_color: "#6ef5a8",
+  background_color: "#0b0d11",
+  background_secondary: "#17231d",
+  background_style: "theme",
+  font_family: "modern",
+  button_radius: 18,
   theme_preset: "mint",
   theme: "system",
 };
@@ -1061,6 +1071,77 @@ function Dashboard({ session }: { session: Session }) {
                 ))}
               </div>
             </div>
+            <div className="advanced-appearance">
+              <label>
+                Fonte do perfil
+                <select
+                  value={profile.font_family || "modern"}
+                  onChange={(event) =>
+                    update(
+                      "font_family",
+                      event.target.value as Profile["font_family"],
+                    )
+                  }
+                >
+                  <option value="modern">Moderna</option>
+                  <option value="rounded">Arredondada</option>
+                  <option value="classic">Clássica</option>
+                  <option value="system">Sistema</option>
+                </select>
+              </label>
+              <label>
+                Arredondamento dos links{" "}
+                <strong>{profile.button_radius ?? 18}px</strong>
+                <input
+                  type="range"
+                  min="0"
+                  max="32"
+                  value={profile.button_radius ?? 18}
+                  onChange={(event) =>
+                    update("button_radius", Number(event.target.value))
+                  }
+                />
+              </label>
+              <label>
+                Fundo da página
+                <select
+                  value={profile.background_style || "theme"}
+                  onChange={(event) =>
+                    update(
+                      "background_style",
+                      event.target.value as Profile["background_style"],
+                    )
+                  }
+                >
+                  <option value="theme">Do tema escolhido</option>
+                  <option value="solid">Cor sólida</option>
+                  <option value="gradient">Gradiente</option>
+                </select>
+              </label>
+              {profile.background_style !== "theme" && (
+                <label className="background-colors">
+                  Cores do fundo
+                  <span>
+                    <input
+                      type="color"
+                      value={profile.background_color || "#0b0d11"}
+                      onChange={(event) =>
+                        update("background_color", event.target.value)
+                      }
+                    />
+                    {profile.background_style === "gradient" && (
+                      <input
+                        type="color"
+                        value={profile.background_secondary || "#17231d"}
+                        onChange={(event) =>
+                          update("background_secondary", event.target.value)
+                        }
+                      />
+                    )}
+                  </span>
+                </label>
+              )}
+            </div>
           </EditorSection>
           <EditorSection
             id="estatisticas"
@@ -1362,6 +1443,28 @@ function isLinkActive(link: UserLink) {
   );
 }
 
+function profileVisualStyle(profile: Profile): React.CSSProperties {
+  const fonts = {
+    modern: '"DM Sans", sans-serif',
+    rounded: '"Manrope", sans-serif',
+    classic: 'Georgia, "Times New Roman", serif',
+    system: 'system-ui, -apple-system, "Segoe UI", sans-serif',
+  };
+  const background =
+    profile.background_style === "solid"
+      ? profile.background_color
+      : profile.background_style === "gradient"
+        ? `linear-gradient(145deg, ${profile.background_color}, ${profile.background_secondary})`
+        : undefined;
+  return {
+    "--accent": profile.accent_color,
+    "--accent-strong": profile.accent_color,
+    "--link-radius": `${profile.button_radius ?? 18}px`,
+    "--profile-font": fonts[profile.font_family || "modern"],
+    ...(background ? { background } : {}),
+  } as React.CSSProperties;
+}
+
 function LiveProfilePreview({
   profile,
   links,
@@ -1382,7 +1485,7 @@ function LiveProfilePreview({
       </div>
       <div
         className={`live-phone live-${resolvedTheme} preset-${profile.theme_preset}`}
-        style={{ "--accent": profile.accent_color } as React.CSSProperties}
+        style={profileVisualStyle(profile)}
       >
         {profile.banner_url && (
           <img className="live-banner" src={profile.banner_url} alt="" />
@@ -2171,10 +2274,12 @@ function PublicPage({ session }: { session: Session | null }) {
     <main
       className={`page-shell preset-${p?.theme_preset || "mint"} ${resolvedTheme === "light" ? "public-light" : ""}`}
       style={
-        {
-          "--accent": p?.accent_color || "#6ef5a8",
-          "--accent-strong": p?.accent_color || "#6ef5a8",
-        } as React.CSSProperties
+        p
+          ? profileVisualStyle(p)
+          : ({
+              "--accent": "#6ef5a8",
+              "--accent-strong": "#6ef5a8",
+            } as React.CSSProperties)
       }
     >
       <div className="ambient ambient-one" />
