@@ -1,4 +1,4 @@
-import { ChangeEvent, FormEvent, useEffect, useState } from "react";
+import { ChangeEvent, FormEvent, Fragment, useEffect, useState } from "react";
 import {
   BrowserRouter,
   Link,
@@ -25,6 +25,8 @@ import {
   ImageUp,
   KeyRound,
   Link2,
+  Mail,
+  MessageCircle,
   Loader2,
   LogOut,
   MapPin,
@@ -32,6 +34,7 @@ import {
   Moon,
   Palette,
   Plus,
+  Phone,
   QrCode,
   Save,
   Settings,
@@ -117,6 +120,10 @@ type UserLink = {
   link_style: "default" | "outline" | "glass" | "solid";
   starts_at: string | null;
   ends_at: string | null;
+  link_type: "url" | "whatsapp" | "email" | "phone" | "pix";
+  action_value: string;
+  group_name: string;
+  display_mode: "button" | "social";
 };
 const emptyProfile: Profile = {
   id: "",
@@ -571,6 +578,10 @@ function Dashboard({ session }: { session: Session }) {
         link_style: "default",
         starts_at: null,
         ends_at: null,
+        link_type: "url",
+        action_value: "",
+        group_name: "",
+        display_mode: "button",
       },
     ]);
     setDirty(true);
@@ -722,18 +733,29 @@ function Dashboard({ session }: { session: Session }) {
     await supabase.from("links").delete().eq("profile_id", session.user.id);
     if (links.length) {
       const payload = links
-        .filter((l) => l.title && l.url)
+        .filter(
+          (l) =>
+            l.title &&
+            ((l.link_type || "url") === "url" ? l.url : l.action_value),
+        )
         .map((l, i) => ({
           profile_id: session.user.id,
           title: l.title,
           description: l.description,
-          url: normalizeUrl(l.url),
+          url:
+            (l.link_type || "url") === "url"
+              ? normalizeUrl(l.url)
+              : "https://linksdev.app/acao",
           position: i,
           is_featured: l.is_featured,
           is_visible: l.is_visible,
           link_style: l.link_style || "default",
           starts_at: l.starts_at || null,
           ends_at: l.ends_at || null,
+          link_type: l.link_type || "url",
+          action_value: l.action_value || "",
+          group_name: l.group_name || "",
+          display_mode: l.display_mode || "button",
         }));
       const { error } = await supabase.from("links").insert(payload);
       if (error) {
@@ -1320,7 +1342,7 @@ function SortableLinkEditor({
         <small>{index + 1}</small>
       </button>
       <span className="detected-icon" title="Ícone identificado">
-        <AutomaticLinkIcon url={link.url} />
+        <LinkVisualIcon link={link} />
       </span>
       <div className="link-fields">
         <input
@@ -1379,6 +1401,59 @@ function SortableLinkEditor({
           <CalendarClock /> Agendamento e estilo
         </summary>
         <div>
+          <label>
+            Tipo de link
+            <select
+              value={link.link_type || "url"}
+              onChange={(event) => onUpdate("link_type", event.target.value)}
+            >
+              <option value="url">Site ou rede social</option>
+              <option value="whatsapp">WhatsApp</option>
+              <option value="email">E-mail</option>
+              <option value="phone">Telefone</option>
+              <option value="pix">Chave Pix</option>
+            </select>
+          </label>
+          {link.link_type !== "url" && (
+            <label>
+              {link.link_type === "whatsapp"
+                ? "Número com DDD"
+                : link.link_type === "email"
+                  ? "Endereço de e-mail"
+                  : link.link_type === "phone"
+                    ? "Número de telefone"
+                    : "Chave Pix"}
+              <input
+                value={link.action_value || ""}
+                onChange={(event) =>
+                  onUpdate("action_value", event.target.value)
+                }
+                placeholder={
+                  link.link_type === "whatsapp"
+                    ? "5511999999999"
+                    : "Digite o valor"
+                }
+              />
+            </label>
+          )}
+          <label>
+            Grupo ou seção
+            <input
+              value={link.group_name || ""}
+              onChange={(event) => onUpdate("group_name", event.target.value)}
+              placeholder="Ex.: Meus projetos"
+            />
+          </label>
+          <label>
+            Exibição
+            <select
+              value={link.display_mode || "button"}
+              onChange={(event) => onUpdate("display_mode", event.target.value)}
+            >
+              <option value="button">Botão completo</option>
+              <option value="social">Ícone social compacto</option>
+            </select>
+          </label>
           <label>
             Estilo
             <select
@@ -1441,6 +1516,24 @@ function isLinkActive(link: UserLink) {
     (!link.starts_at || new Date(link.starts_at).getTime() <= now) &&
     (!link.ends_at || new Date(link.ends_at).getTime() >= now)
   );
+}
+
+function linkHref(link: UserLink) {
+  const value = (link.action_value || "").trim();
+  if (link.link_type === "whatsapp")
+    return `https://wa.me/${value.replace(/\D/g, "")}`;
+  if (link.link_type === "email") return `mailto:${value}`;
+  if (link.link_type === "phone") return `tel:${value.replace(/[^\d+]/g, "")}`;
+  if (link.link_type === "pix") return "#pix";
+  return link.url;
+}
+
+function LinkVisualIcon({ link }: { link: UserLink }) {
+  if (link.link_type === "whatsapp") return <FaWhatsapp />;
+  if (link.link_type === "email") return <Mail />;
+  if (link.link_type === "phone") return <Phone />;
+  if (link.link_type === "pix") return <QrCode />;
+  return <AutomaticLinkIcon url={link.url} />;
 }
 
 function profileVisualStyle(profile: Profile): React.CSSProperties {
@@ -1513,7 +1606,7 @@ function LiveProfilePreview({
                 key={link.client_id || link.id}
                 className={`live-link style-${link.link_style || "default"}${link.is_featured ? " featured" : ""}`}
               >
-                <AutomaticLinkIcon url={link.url} />
+                <LinkVisualIcon link={link} />
                 <span>{link.title || "Novo link"}</span>
                 <b>↗</b>
               </div>
@@ -2259,6 +2352,10 @@ function PublicPage({ session }: { session: Session | null }) {
       link_style: "default" as const,
       starts_at: null,
       ends_at: null,
+      link_type: "url" as const,
+      action_value: "",
+      group_name: "",
+      display_mode: "button" as const,
     }))
   ).filter(isLinkActive);
   function trackClick(link: UserLink) {
@@ -2269,6 +2366,13 @@ function PublicPage({ session }: { session: Session | null }) {
       link_title: link.title,
       link_url: link.url,
     });
+  }
+  async function activateLink(link: UserLink) {
+    trackClick(link);
+    if (link.link_type === "pix") {
+      await navigator.clipboard.writeText(link.action_value || "");
+      window.alert("Chave Pix copiada!");
+    }
   }
   return (
     <main
@@ -2349,26 +2453,65 @@ function PublicPage({ session }: { session: Session | null }) {
           )}
         </header>
         <div className="links-list">
-          {shownLinks.map((l, i) => (
-            <a
-              className={`profile-link style-${l.link_style || "default"}${l.is_featured ? " featured" : ""}`}
-              href={l.url}
-              target="_blank"
-              rel="noreferrer"
-              key={l.id || i}
-              onClick={() => trackClick(l)}
-            >
-              <span className="link-icon">
-                <AutomaticLinkIcon url={l.url} />
-              </span>
-              <span className="link-copy">
-                <strong>{l.title}</strong>
-                {l.description && <small>{l.description}</small>}
-              </span>
-              <span className="link-arrow">↗</span>
-            </a>
-          ))}
+          {shownLinks
+            .filter((link) => link.display_mode !== "social")
+            .map((l, i, list) => (
+              <Fragment key={l.id || i}>
+                {l.group_name &&
+                  (i === 0 || list[i - 1].group_name !== l.group_name) && (
+                    <p className="link-group-title">{l.group_name}</p>
+                  )}
+                <a
+                  className={`profile-link style-${l.link_style || "default"}${l.is_featured ? " featured" : ""}`}
+                  href={linkHref(l)}
+                  target={
+                    l.link_type === "email" ||
+                    l.link_type === "phone" ||
+                    l.link_type === "pix"
+                      ? undefined
+                      : "_blank"
+                  }
+                  rel="noreferrer"
+                  onClick={(event) => {
+                    if (l.link_type === "pix") event.preventDefault();
+                    void activateLink(l);
+                  }}
+                >
+                  <span className="link-icon">
+                    <LinkVisualIcon link={l} />
+                  </span>
+                  <span className="link-copy">
+                    <strong>{l.title}</strong>
+                    {l.description && <small>{l.description}</small>}
+                  </span>
+                  <span
+                    className={`link-arrow${l.link_type === "pix" ? " copy-action" : ""}`}
+                  >
+                    {l.link_type === "pix" ? "Copiar" : "↗"}
+                  </span>
+                </a>
+              </Fragment>
+            ))}
         </div>
+        {shownLinks.some((link) => link.display_mode === "social") && (
+          <div className="compact-socials" aria-label="Redes sociais">
+            {shownLinks
+              .filter((link) => link.display_mode === "social")
+              .map((link, index) => (
+                <a
+                  key={link.id || index}
+                  href={linkHref(link)}
+                  target="_blank"
+                  rel="noreferrer"
+                  title={link.title}
+                  aria-label={link.title}
+                  onClick={() => trackClick(link)}
+                >
+                  <LinkVisualIcon link={link} />
+                </a>
+              ))}
+          </div>
+        )}
         <footer>
           <p>
             Feito com <strong>LinksDev</strong>

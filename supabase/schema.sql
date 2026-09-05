@@ -34,6 +34,10 @@ create table if not exists public.links (
   is_featured boolean not null default false,
   is_visible boolean not null default true,
   link_style text not null default 'default',
+  link_type text not null default 'url',
+  action_value text not null default '',
+  group_name text not null default '',
+  display_mode text not null default 'button',
   starts_at timestamptz,
   ends_at timestamptz,
   created_at timestamptz not null default now()
